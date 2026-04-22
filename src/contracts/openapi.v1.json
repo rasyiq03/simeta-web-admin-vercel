@@ -1,0 +1,1843 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/v1": {
+      "get": {
+        "description": "Returns a hello message to verify the API is running",
+        "operationId": "AppController_getHello_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Health check",
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/api/v1/auth/register": {
+      "post": {
+        "description": "Register a new user account with name, email, and password",
+        "operationId": "AuthController_register_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Register new user",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "description": "Authenticate user and return JWT token. Requires deviceId for device binding.",
+        "operationId": "AuthController_login_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "User login",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v1/users": {
+      "get": {
+        "description": "ADMIN: Retrieve all registered users",
+        "operationId": "UsersController_findAll_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get all users",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/api/v1/users/{id}": {
+      "get": {
+        "description": "ADMIN: Retrieve a specific user's details",
+        "operationId": "UsersController_findOne_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get user by ID",
+        "tags": [
+          "Users"
+        ]
+      },
+      "delete": {
+        "description": "ADMIN: Delete a user account",
+        "operationId": "UsersController_remove_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Delete user",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/api/v1/users/{id}/role": {
+      "patch": {
+        "description": "ADMIN: Assign a role to a user",
+        "operationId": "UsersController_assignRole_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignRoleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Assign role",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/api/v1/users/{id}/reset-device": {
+      "patch": {
+        "description": "ADMIN: Reset device binding for a user",
+        "operationId": "UsersController_resetDevice_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Reset device binding",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/api/v1/attendance/session": {
+      "post": {
+        "description": "ADMIN: Create a new attendance session",
+        "operationId": "AttendanceController_createSession_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSessionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Create attendance session",
+        "tags": [
+          "Attendance"
+        ]
+      }
+    },
+    "/api/v1/attendance/check-in": {
+      "post": {
+        "description": "USER: Check-in to an attendance session with GPS coordinates",
+        "operationId": "AttendanceController_checkIn_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAttendanceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Check-in attendance",
+        "tags": [
+          "Attendance"
+        ]
+      }
+    },
+    "/api/v1/attendance": {
+      "get": {
+        "description": "ADMIN: Retrieve all attendance records",
+        "operationId": "AttendanceController_findAll_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get all attendance records",
+        "tags": [
+          "Attendance"
+        ]
+      }
+    },
+    "/api/v1/attendance/{id}": {
+      "get": {
+        "description": "ADMIN: Retrieve a specific attendance record",
+        "operationId": "AttendanceController_findOne_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get attendance by ID",
+        "tags": [
+          "Attendance"
+        ]
+      },
+      "patch": {
+        "description": "ADMIN: Update an attendance record",
+        "operationId": "AttendanceController_update_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAttendanceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Update attendance",
+        "tags": [
+          "Attendance"
+        ]
+      },
+      "delete": {
+        "description": "ADMIN: Delete an attendance record",
+        "operationId": "AttendanceController_remove_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Delete attendance",
+        "tags": [
+          "Attendance"
+        ]
+      }
+    },
+    "/api/v1/mentoring/report": {
+      "post": {
+        "description": "MENTOR/DOSEN: Create a mentoring report including memorization records",
+        "operationId": "MentoringController_createReport_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMentoringReportDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Create mentoring report",
+        "tags": [
+          "Mentoring"
+        ]
+      }
+    },
+    "/api/v1/mentoring/mentees": {
+      "get": {
+        "description": "MENTOR/DOSEN: View list of assigned mentees",
+        "operationId": "MentoringController_getMyMentees_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get my mentees",
+        "tags": [
+          "Mentoring"
+        ]
+      }
+    },
+    "/api/v1/quiz": {
+      "post": {
+        "description": "ADMIN/DOSEN: Create a new quiz with questions",
+        "operationId": "QuizController_create_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateQuizDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Create quiz",
+        "tags": [
+          "Quiz"
+        ]
+      },
+      "get": {
+        "description": "ALL (authenticated): Retrieve list of available quizzes",
+        "operationId": "QuizController_findAll_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get all quizzes",
+        "tags": [
+          "Quiz"
+        ]
+      }
+    },
+    "/api/v1/quiz/my-results": {
+      "get": {
+        "description": "USER: View own quiz results and scores",
+        "operationId": "QuizController_getMyResults_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get my quiz results",
+        "tags": [
+          "Quiz"
+        ]
+      }
+    },
+    "/api/v1/quiz/{id}/start": {
+      "get": {
+        "description": "USER: Start a quiz and get questions (without answers)",
+        "operationId": "QuizController_startQuiz_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Start quiz",
+        "tags": [
+          "Quiz"
+        ]
+      }
+    },
+    "/api/v1/quiz/{id}/submit": {
+      "post": {
+        "description": "USER: Submit answers for a quiz and get score",
+        "operationId": "QuizController_submitQuiz_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitQuizDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Submit quiz answers",
+        "tags": [
+          "Quiz"
+        ]
+      }
+    },
+    "/api/v1/quiz/{id}/results": {
+      "get": {
+        "description": "ADMIN/DOSEN: View all results for a specific quiz",
+        "operationId": "QuizController_getResults_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get quiz results",
+        "tags": [
+          "Quiz"
+        ]
+      }
+    },
+    "/api/v1/permission": {
+      "post": {
+        "description": "USER: Submit a permission/leave request (auto-approve if quota available)",
+        "operationId": "PermissionController_create_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePermissionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Create permission request",
+        "tags": [
+          "Permission"
+        ]
+      },
+      "get": {
+        "description": "ADMIN: Retrieve all permission requests with optional status filter",
+        "operationId": "PermissionController_findAll_v1",
+        "parameters": [
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Filter by status (e.g. PENDING, APPROVED, REJECTED)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get all permissions",
+        "tags": [
+          "Permission"
+        ]
+      }
+    },
+    "/api/v1/permission/my": {
+      "get": {
+        "description": "USER: View own permission requests",
+        "operationId": "PermissionController_getMyPermissions_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get my permissions",
+        "tags": [
+          "Permission"
+        ]
+      }
+    },
+    "/api/v1/permission/approve-all": {
+      "patch": {
+        "description": "ADMIN: Approve all pending permission requests",
+        "operationId": "PermissionController_approveAll_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Approve all pending",
+        "tags": [
+          "Permission"
+        ]
+      }
+    },
+    "/api/v1/permission/reject-all": {
+      "patch": {
+        "description": "ADMIN: Reject all pending permission requests",
+        "operationId": "PermissionController_rejectAll_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Reject all pending",
+        "tags": [
+          "Permission"
+        ]
+      }
+    },
+    "/api/v1/permission/{id}": {
+      "get": {
+        "description": "ADMIN: Retrieve a specific permission request",
+        "operationId": "PermissionController_findOne_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get permission by ID",
+        "tags": [
+          "Permission"
+        ]
+      }
+    },
+    "/api/v1/permission/{id}/approve": {
+      "patch": {
+        "description": "ADMIN: Approve a specific permission request",
+        "operationId": "PermissionController_approveOne_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Approve permission",
+        "tags": [
+          "Permission"
+        ]
+      }
+    },
+    "/api/v1/permission/{id}/reject": {
+      "patch": {
+        "description": "ADMIN: Reject a specific permission request",
+        "operationId": "PermissionController_rejectOne_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Reject permission",
+        "tags": [
+          "Permission"
+        ]
+      }
+    },
+    "/api/v1/resume": {
+      "post": {
+        "description": "USER: Submit a new resume",
+        "operationId": "ResumeController_create_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateResumeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Submit resume",
+        "tags": [
+          "Resume"
+        ]
+      },
+      "get": {
+        "description": "ADMIN: Retrieve all student resumes",
+        "operationId": "ResumeController_findAll_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get all resumes",
+        "tags": [
+          "Resume"
+        ]
+      }
+    },
+    "/api/v1/resume/my": {
+      "get": {
+        "description": "USER: View own submitted resumes",
+        "operationId": "ResumeController_getMyResumes_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get my resumes",
+        "tags": [
+          "Resume"
+        ]
+      }
+    },
+    "/api/v1/resume/{id}": {
+      "get": {
+        "description": "ALL (authenticated): Retrieve a specific resume",
+        "operationId": "ResumeController_findOne_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get resume by ID",
+        "tags": [
+          "Resume"
+        ]
+      },
+      "patch": {
+        "description": "USER: Update own resume",
+        "operationId": "ResumeController_update_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateResumeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Update resume",
+        "tags": [
+          "Resume"
+        ]
+      },
+      "delete": {
+        "description": "USER: Delete own resume",
+        "operationId": "ResumeController_remove_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Delete resume",
+        "tags": [
+          "Resume"
+        ]
+      }
+    },
+    "/api/v1/dashboard/my-grades": {
+      "get": {
+        "description": "USER: View own grades and scores",
+        "operationId": "DashboardController_getMyGrades_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get my grades",
+        "tags": [
+          "Dashboard"
+        ]
+      }
+    },
+    "/api/v1/dashboard/all-grades": {
+      "get": {
+        "description": "ADMIN: View ranking of all students",
+        "operationId": "DashboardController_getAllGrades_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get all student grades",
+        "tags": [
+          "Dashboard"
+        ]
+      }
+    },
+    "/api/v1/dashboard/student/{id}": {
+      "get": {
+        "description": "ADMIN: View grades for a specific student",
+        "operationId": "DashboardController_getStudentGrades_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get student grades by ID",
+        "tags": [
+          "Dashboard"
+        ]
+      }
+    },
+    "/api/v1/notification": {
+      "get": {
+        "description": "USER: Retrieve all notifications for the authenticated user",
+        "operationId": "NotificationController_getMyNotifications_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get my notifications",
+        "tags": [
+          "Notification"
+        ]
+      }
+    },
+    "/api/v1/notification/unread-count": {
+      "get": {
+        "description": "USER: Get the number of unread notifications",
+        "operationId": "NotificationController_getUnreadCount_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get unread count",
+        "tags": [
+          "Notification"
+        ]
+      }
+    },
+    "/api/v1/notification/{id}/read": {
+      "patch": {
+        "description": "USER: Mark a specific notification as read",
+        "operationId": "NotificationController_markAsRead_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Mark notification as read",
+        "tags": [
+          "Notification"
+        ]
+      }
+    },
+    "/api/v1/notification/read-all": {
+      "patch": {
+        "description": "USER: Mark all notifications as read",
+        "operationId": "NotificationController_markAllAsRead_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Mark all as read",
+        "tags": [
+          "Notification"
+        ]
+      }
+    },
+    "/api/v1/news": {
+      "post": {
+        "description": "ADMIN/DOSEN: Create a news article (triggers notification)",
+        "operationId": "NewsController_create_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateNewsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Create news article",
+        "tags": [
+          "News"
+        ]
+      },
+      "get": {
+        "description": "PUBLIC: Retrieve all news articles",
+        "operationId": "NewsController_findAll_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get all news",
+        "tags": [
+          "News"
+        ]
+      }
+    },
+    "/api/v1/news/{id}": {
+      "get": {
+        "description": "PUBLIC: Retrieve a specific news article",
+        "operationId": "NewsController_findOne_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get news by ID",
+        "tags": [
+          "News"
+        ]
+      },
+      "patch": {
+        "description": "ADMIN/DOSEN: Update a news article (triggers notification)",
+        "operationId": "NewsController_update_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Update news article",
+        "tags": [
+          "News"
+        ]
+      },
+      "delete": {
+        "description": "ADMIN: Delete a news article",
+        "operationId": "NewsController_remove_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Delete news article",
+        "tags": [
+          "News"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "SIMETA API",
+    "description": "SIMETA (Sistem Informasi Mentoring Tahfidz) — Enterprise API Documentation.\n\n## Authentication\nMost endpoints require a JWT Bearer token. Use `/api/v1/auth/login` to obtain a token.\n\n## Roles\n- **ADMIN**: Full system access\n- **DOSEN**: Lecturer access (mentoring, quizzes, news)\n- **MENTOR**: Mentor access (mentoring reports)\n- **MAHASISWA**: Student access (personal data)",
+    "version": "1.0.0",
+    "contact": {
+      "name": "SIMETA Team",
+      "url": "",
+      "email": "admin@simeta.id"
+    },
+    "license": {
+      "name": "UNLICENSED",
+      "url": ""
+    }
+  },
+  "tags": [
+    {
+      "name": "Health",
+      "description": "Application health check"
+    },
+    {
+      "name": "Auth",
+      "description": "Authentication & registration"
+    },
+    {
+      "name": "Users",
+      "description": "User management (Admin only)"
+    },
+    {
+      "name": "Attendance",
+      "description": "Attendance & session management"
+    },
+    {
+      "name": "Mentoring",
+      "description": "Mentoring reports & mentee management"
+    },
+    {
+      "name": "Quiz",
+      "description": "Quiz creation, submission & results"
+    },
+    {
+      "name": "Permission",
+      "description": "Permission/leave requests"
+    },
+    {
+      "name": "Resume",
+      "description": "Student resume management"
+    },
+    {
+      "name": "Dashboard",
+      "description": "Grades & student dashboard"
+    },
+    {
+      "name": "Notification",
+      "description": "User notifications"
+    },
+    {
+      "name": "News",
+      "description": "News & announcements"
+    }
+  ],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "JWT-auth": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http",
+        "description": "Enter your JWT token"
+      }
+    },
+    "schemas": {
+      "RegisterDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 6
+          }
+        },
+        "required": [
+          "name",
+          "email",
+          "password"
+        ]
+      },
+      "LoginDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string"
+          },
+          "deviceId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "password",
+          "deviceId"
+        ]
+      },
+      "AssignRoleDto": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "ADMIN",
+              "DOSEN",
+              "MENTOR",
+              "MAHASISWA"
+            ]
+          }
+        },
+        "required": [
+          "role"
+        ]
+      },
+      "CreateSessionDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "startTime": {
+            "type": "string"
+          },
+          "endTime": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "startTime",
+          "endTime"
+        ]
+      },
+      "CreateAttendanceDto": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "latitude": {
+            "type": "number"
+          },
+          "longitude": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "sessionId",
+          "latitude",
+          "longitude"
+        ]
+      },
+      "UpdateAttendanceDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "MemorizationRecordDto": {
+        "type": "object",
+        "properties": {
+          "studentId": {
+            "type": "string"
+          },
+          "surahName": {
+            "type": "string"
+          },
+          "ayatStart": {
+            "type": "number"
+          },
+          "ayatEnd": {
+            "type": "number"
+          },
+          "fluency": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "studentId",
+          "surahName",
+          "ayatStart",
+          "ayatEnd",
+          "fluency"
+        ]
+      },
+      "CreateMentoringReportDto": {
+        "type": "object",
+        "properties": {
+          "groupId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "date": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "memorizationRecords": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MemorizationRecordDto"
+            }
+          }
+        },
+        "required": [
+          "groupId",
+          "date",
+          "memorizationRecords"
+        ]
+      },
+      "CreateQuestionDto": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "correctIdx": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "text",
+          "options",
+          "correctIdx"
+        ]
+      },
+      "CreateQuizDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "PRETEST",
+              "POSTTEST"
+            ]
+          },
+          "questions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreateQuestionDto"
+            }
+          }
+        },
+        "required": [
+          "title",
+          "type",
+          "questions"
+        ]
+      },
+      "AnswerDto": {
+        "type": "object",
+        "properties": {
+          "questionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "selectedIdx": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "questionId",
+          "selectedIdx"
+        ]
+      },
+      "SubmitQuizDto": {
+        "type": "object",
+        "properties": {
+          "answers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AnswerDto"
+            }
+          }
+        },
+        "required": [
+          "answers"
+        ]
+      },
+      "CreatePermissionDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string"
+          },
+          "sessionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "proofUrl": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
+      "CreateResumeDto": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string",
+            "minLength": 200
+          },
+          "fileUrl": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "content"
+        ]
+      },
+      "UpdateResumeDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "CreateNewsDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "imageUrl": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "content"
+        ]
+      }
+    }
+  }
+}

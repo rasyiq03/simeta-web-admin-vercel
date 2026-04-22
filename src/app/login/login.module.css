@@ -1,0 +1,109 @@
+/* login.module.css — Full-screen gradient + glassmorphism */
+.container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--color-navy-dark) 0%, var(--color-navy) 50%, #1A2A7A 100%);
+    position: relative;
+    overflow: hidden;
+    padding: var(--space-6)
+}
+
+.circle {
+    position: absolute;
+    border-radius: 50%;
+    opacity: .08;
+    pointer-events: none
+}
+
+.circle1 {
+    width: 500px;
+    height: 500px;
+    background: var(--color-amber);
+    top: -120px;
+    right: -100px;
+    animation: float 8s ease-in-out infinite
+}
+
+.circle2 {
+    width: 350px;
+    height: 350px;
+    background: var(--color-amber-light);
+    bottom: -80px;
+    left: -60px;
+    animation: float 10s ease-in-out infinite reverse
+}
+
+.circle3 {
+    width: 200px;
+    height: 200px;
+    background: var(--color-info);
+    top: 40%;
+    left: 10%;
+    animation: float 12s ease-in-out infinite
+}
+
+.card {
+    width: 100%;
+    max-width: 420px;
+    background: rgba(255, 255, 255, .95);
+    backdrop-filter: blur(20px);
+    border-radius: var(--radius-xl);
+    padding: var(--space-10);
+    box-shadow: var(--shadow-xl);
+    position: relative;
+    z-index: 1;
+    animation: slideUp .5s ease
+}
+
+.logoContainer {
+    text-align: center;
+    margin-bottom: var(--space-8)
+}
+
+.logo {
+    width: 56px;
+    height: 56px;
+    margin: 0 auto var(--space-4);
+    border-radius: var(--radius-lg);
+    background: linear-gradient(135deg, var(--color-amber), var(--color-amber-light));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #fff;
+    box-shadow: 0 4px 16px rgba(222, 144, 42, .3)
+}
+
+.title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-navy);
+    letter-spacing: -.02em
+}
+
+.subtitle {
+    font-size: .875rem;
+    color: var(--color-text-secondary);
+    margin-top: var(--space-1)
+}
+
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5)
+}
+
+@keyframes float {
+
+    0%,
+    100% {
+        transform: translateY(0)
+    }
+
+    50% {
+        transform: translateY(-20px)
+    }
+}
