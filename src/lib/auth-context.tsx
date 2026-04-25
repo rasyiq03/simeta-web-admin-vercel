@@ -79,6 +79,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
         const decoded = decodeJWT(accessToken);
         setUser(decoded);
         setToken(accessToken);
+        if (decoded && decoded.role !== 'MENTOR' && decoded.role !== 'MENTEE') {
+            localStorage.removeItem('simeta_device_id');
+        }
     }, []);
 
     /**

@@ -427,10 +427,14 @@ export default function UsersPage(): React.JSX.Element {
                                                     </span>
                                                 </td>
                                                 <td>
-                                                    {usr.deviceId ? (
-                                                        <span className="badge badge-success" title={usr.deviceId}>Terikat</span>
+                                                    {(usr.role === 'MENTOR' || usr.role === 'MENTEE') ? (
+                                                        usr.deviceId ? (
+                                                            <span className="badge badge-success" title={usr.deviceId}>Terikat</span>
+                                                        ) : (
+                                                            <span className="badge badge-warning">Bebas</span>
+                                                        )
                                                     ) : (
-                                                        <span className="badge badge-warning">Bebas</span>
+                                                        <span className="text-muted text-xs">—</span>
                                                     )}
                                                 </td>
                                                 <td className="text-xs text-muted">
@@ -444,13 +448,15 @@ export default function UsersPage(): React.JSX.Element {
                                                                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
                                                             </svg>
                                                         </button>
-                                                        <button className="btn btn-ghost btn-icon-sm" onClick={() => handleResetDevice(usr)} title="Reset Device"
-                                                            style={{ color: 'var(--color-warning)' }}>
-                                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                                <polyline points="23 4 23 10 17 10"/>
-                                                                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-                                                            </svg>
-                                                        </button>
+                                                        {(usr.role === 'MENTOR' || usr.role === 'MENTEE') && (
+                                                            <button className="btn btn-ghost btn-icon-sm" onClick={() => handleResetDevice(usr)} title="Reset Device"
+                                                                style={{ color: 'var(--color-warning)' }}>
+                                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                                    <polyline points="23 4 23 10 17 10"/>
+                                                                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                                                                </svg>
+                                                            </button>
+                                                        )}
                                                         <button className="btn btn-ghost btn-icon-sm" onClick={() => handleDelete(usr)} title="Hapus"
                                                             style={{ color: 'var(--color-danger)' }}>
                                                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
