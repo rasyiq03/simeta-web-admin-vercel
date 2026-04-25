@@ -46,8 +46,7 @@ import type {
     MessageResponse,
 } from '@/types';
 
-const API_BASE: string = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-const API_PREFIX = '/api/v1';
+const API_BASE: string = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001').replace(/\/$/, '');
 
 export function getToken(): string | null {
     if (typeof window === 'undefined') return null;
@@ -102,10 +101,10 @@ async function apiFetch<T = unknown>(endpoint: string, options: RequestInit = {}
 
 export const authApi = {
     login: (body: LoginRequest): Promise<LoginResponse> =>
-        apiFetch<LoginResponse>(`${API_PREFIX}/auth/login`, { method: 'POST', body: JSON.stringify(body) }),
+        apiFetch<LoginResponse>(`/auth/login`, { method: 'POST', body: JSON.stringify(body) }),
 
     register: (body: { name: string; email: string; password: string }): Promise<MessageResponse> =>
-        apiFetch<MessageResponse>(`${API_PREFIX}/auth/register`, { method: 'POST', body: JSON.stringify(body) }),
+        apiFetch<MessageResponse>(`/auth/register`, { method: 'POST', body: JSON.stringify(body) }),
 };
 
 // =============================================================
@@ -113,18 +112,18 @@ export const authApi = {
 // =============================================================
 
 export const usersApi = {
-    getAll: (): Promise<User[]> => apiFetch<User[]>(`${API_PREFIX}/users`),
+    getAll: (): Promise<User[]> => apiFetch<User[]>(`/users`),
 
-    getById: (id: string): Promise<User> => apiFetch<User>(`${API_PREFIX}/users/${id}`),
+    getById: (id: string): Promise<User> => apiFetch<User>(`/users/${id}`),
 
     assignRole: (id: string, role: UserRole): Promise<MessageResponse> =>
-        apiFetch<MessageResponse>(`${API_PREFIX}/users/${id}/role`, { method: 'PATCH', body: JSON.stringify({ role }) }),
+        apiFetch<MessageResponse>(`/users/${id}/role`, { method: 'PATCH', body: JSON.stringify({ role }) }),
 
     resetDevice: (id: string): Promise<MessageResponse> =>
-        apiFetch<MessageResponse>(`${API_PREFIX}/users/${id}/reset-device`, { method: 'PATCH' }),
+        apiFetch<MessageResponse>(`/users/${id}/reset-device`, { method: 'PATCH' }),
 
     delete: (id: string): Promise<MessageResponse> =>
-        apiFetch<MessageResponse>(`${API_PREFIX}/users/${id}`, { method: 'DELETE' }),
+        apiFetch<MessageResponse>(`/users/${id}`, { method: 'DELETE' }),
 };
 
 // =============================================================
@@ -133,20 +132,20 @@ export const usersApi = {
 
 export const attendanceApi = {
     createSession: (body: CreateSessionRequest): Promise<AttendanceSession> =>
-        apiFetch<AttendanceSession>(`${API_PREFIX}/attendance/session`, { method: 'POST', body: JSON.stringify(body) }),
+        apiFetch<AttendanceSession>(`/attendance/session`, { method: 'POST', body: JSON.stringify(body) }),
 
     checkIn: (body: { sessionId: string; latitude: number; longitude: number }): Promise<AttendanceRecord> =>
-        apiFetch<AttendanceRecord>(`${API_PREFIX}/attendance/check-in`, { method: 'POST', body: JSON.stringify(body) }),
+        apiFetch<AttendanceRecord>(`/attendance/check-in`, { method: 'POST', body: JSON.stringify(body) }),
 
-    getAll: (): Promise<AttendanceSession[]> => apiFetch<AttendanceSession[]>(`${API_PREFIX}/attendance`),
+    getAll: (): Promise<AttendanceSession[]> => apiFetch<AttendanceSession[]>(`/attendance`),
 
-    getById: (id: string): Promise<AttendanceRecord> => apiFetch<AttendanceRecord>(`${API_PREFIX}/attendance/${id}`),
+    getById: (id: string): Promise<AttendanceRecord> => apiFetch<AttendanceRecord>(`/attendance/${id}`),
 
     update: (id: string, body: Partial<AttendanceRecord>): Promise<AttendanceRecord> =>
-        apiFetch<AttendanceRecord>(`${API_PREFIX}/attendance/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+        apiFetch<AttendanceRecord>(`/attendance/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
 
     delete: (id: string): Promise<MessageResponse> =>
-        apiFetch<MessageResponse>(`${API_PREFIX}/attendance/${id}`, { method: 'DELETE' }),
+        apiFetch<MessageResponse>(`/attendance/${id}`, { method: 'DELETE' }),
 };
 
 // =============================================================
@@ -156,37 +155,37 @@ export const attendanceApi = {
 export const mentoringApi = {
     // ── Group CRUD ──
     createGroup: (body: CreateMentoringGroupRequest): Promise<MentoringGroup> =>
-        apiFetch<MentoringGroup>(`${API_PREFIX}/mentoring/groups`, { method: 'POST', body: JSON.stringify(body) }),
+        apiFetch<MentoringGroup>(`/mentoring/groups`, { method: 'POST', body: JSON.stringify(body) }),
 
     getGroups: (category?: MentoringCategory): Promise<MentoringGroup[]> =>
-        apiFetch<MentoringGroup[]>(`${API_PREFIX}/mentoring/groups${category ? `?category=${category}` : ''}`),
+        apiFetch<MentoringGroup[]>(`/mentoring/groups${category ? `?category=${category}` : ''}`),
 
     getGroupById: (groupId: string): Promise<MentoringGroup> =>
-        apiFetch<MentoringGroup>(`${API_PREFIX}/mentoring/groups/${groupId}`),
+        apiFetch<MentoringGroup>(`/mentoring/groups/${groupId}`),
 
     updateGroup: (groupId: string, body: UpdateMentoringGroupRequest): Promise<MentoringGroup> =>
-        apiFetch<MentoringGroup>(`${API_PREFIX}/mentoring/groups/${groupId}`, { method: 'PATCH', body: JSON.stringify(body) }),
+        apiFetch<MentoringGroup>(`/mentoring/groups/${groupId}`, { method: 'PATCH', body: JSON.stringify(body) }),
 
     deleteGroup: (groupId: string): Promise<MessageResponse> =>
-        apiFetch<MessageResponse>(`${API_PREFIX}/mentoring/groups/${groupId}`, { method: 'DELETE' }),
+        apiFetch<MessageResponse>(`/mentoring/groups/${groupId}`, { method: 'DELETE' }),
 
     // ── Members ──
     addMember: (groupId: string, menteeId: string): Promise<MentoringMember> =>
-        apiFetch<MentoringMember>(`${API_PREFIX}/mentoring/groups/${groupId}/members`, { method: 'POST', body: JSON.stringify({ menteeId }) }),
+        apiFetch<MentoringMember>(`/mentoring/groups/${groupId}/members`, { method: 'POST', body: JSON.stringify({ menteeId }) }),
 
     removeMember: (groupId: string, memberId: string): Promise<MessageResponse> =>
-        apiFetch<MessageResponse>(`${API_PREFIX}/mentoring/groups/${groupId}/members/${memberId}`, { method: 'DELETE' }),
+        apiFetch<MessageResponse>(`/mentoring/groups/${groupId}/members/${memberId}`, { method: 'DELETE' }),
 
     // ── Auto-Generate ──
     autoGenerate: (body: AutoGenerateGroupRequest): Promise<AutoGenerateGroupResult> =>
-        apiFetch<AutoGenerateGroupResult>(`${API_PREFIX}/mentoring/groups/auto-generate`, { method: 'POST', body: JSON.stringify(body) }),
+        apiFetch<AutoGenerateGroupResult>(`/mentoring/groups/auto-generate`, { method: 'POST', body: JSON.stringify(body) }),
 
     // ── Mentor view (MENTOR role only) ──
-    getMyMentees: (): Promise<MentoringGroup[]> => apiFetch<MentoringGroup[]>(`${API_PREFIX}/mentoring/mentees`),
+    getMyMentees: (): Promise<MentoringGroup[]> => apiFetch<MentoringGroup[]>(`/mentoring/mentees`),
 
     // ── Report ──
     createReport: (body: CreateMentoringReportRequest): Promise<MessageResponse> =>
-        apiFetch<MessageResponse>(`${API_PREFIX}/mentoring/report`, { method: 'POST', body: JSON.stringify(body) }),
+        apiFetch<MessageResponse>(`/mentoring/report`, { method: 'POST', body: JSON.stringify(body) }),
 };
 
 // =============================================================
@@ -194,12 +193,12 @@ export const mentoringApi = {
 // =============================================================
 
 export const bamApi = {
-    getSessions: (): Promise<BAMSession[]> => apiFetch<BAMSession[]>(`${API_PREFIX}/bam/sessions`),
+    getSessions: (): Promise<BAMSession[]> => apiFetch<BAMSession[]>(`/bam/sessions`),
 
-    getSessionById: (id: string): Promise<BAMSession> => apiFetch<BAMSession>(`${API_PREFIX}/bam/sessions/${id}`),
+    getSessionById: (id: string): Promise<BAMSession> => apiFetch<BAMSession>(`/bam/sessions/${id}`),
 
     getMentorScore: (mentorId: string): Promise<MentorScore> =>
-        apiFetch<MentorScore>(`${API_PREFIX}/bam/mentor-score/${mentorId}`),
+        apiFetch<MentorScore>(`/bam/mentor-score/${mentorId}`),
 };
 
 // =============================================================
@@ -208,24 +207,24 @@ export const bamApi = {
 
 export const quizApi = {
     create: (body: CreateQuizRequest): Promise<Quiz> =>
-        apiFetch<Quiz>(`${API_PREFIX}/quiz`, { method: 'POST', body: JSON.stringify(body) }),
+        apiFetch<Quiz>(`/quiz`, { method: 'POST', body: JSON.stringify(body) }),
 
-    getAll: (): Promise<Quiz[]> => apiFetch<Quiz[]>(`${API_PREFIX}/quiz`),
+    getAll: (): Promise<Quiz[]> => apiFetch<Quiz[]>(`/quiz`),
 
-    start: (id: string): Promise<Quiz> => apiFetch<Quiz>(`${API_PREFIX}/quiz/${id}/start`),
+    start: (id: string): Promise<Quiz> => apiFetch<Quiz>(`/quiz/${id}/start`),
 
     submit: (id: string, body: { answers: QuizAnswer[] }): Promise<MessageResponse> =>
-        apiFetch<MessageResponse>(`${API_PREFIX}/quiz/${id}/submit`, { method: 'POST', body: JSON.stringify(body) }),
+        apiFetch<MessageResponse>(`/quiz/${id}/submit`, { method: 'POST', body: JSON.stringify(body) }),
 
-    getResults: (id: string): Promise<QuizResult[]> => apiFetch<QuizResult[]>(`${API_PREFIX}/quiz/${id}/results`),
+    getResults: (id: string): Promise<QuizResult[]> => apiFetch<QuizResult[]>(`/quiz/${id}/results`),
 
-    getMyResults: (): Promise<QuizResult[]> => apiFetch<QuizResult[]>(`${API_PREFIX}/quiz/my-results`),
+    getMyResults: (): Promise<QuizResult[]> => apiFetch<QuizResult[]>(`/quiz/my-results`),
 
     getEssaySubmissions: (quizId: string): Promise<EssaySubmission[]> =>
-        apiFetch<EssaySubmission[]>(`${API_PREFIX}/quiz/${quizId}/essay-submissions`),
+        apiFetch<EssaySubmission[]>(`/quiz/${quizId}/essay-submissions`),
 
     gradeEssay: (quizId: string, submissionId: string, score: number): Promise<MessageResponse> =>
-        apiFetch<MessageResponse>(`${API_PREFIX}/quiz/${quizId}/essay/${submissionId}/grade`, {
+        apiFetch<MessageResponse>(`/quiz/${quizId}/essay/${submissionId}/grade`, {
             method: 'PATCH',
             body: JSON.stringify({ score }),
         }),
@@ -237,26 +236,26 @@ export const quizApi = {
 
 export const permissionApi = {
     create: (body: CreatePermissionRequest): Promise<MessageResponse> =>
-        apiFetch<MessageResponse>(`${API_PREFIX}/permission`, { method: 'POST', body: JSON.stringify(body) }),
+        apiFetch<MessageResponse>(`/permission`, { method: 'POST', body: JSON.stringify(body) }),
 
     getAll: (status?: PermissionStatus): Promise<Permission[]> =>
-        apiFetch<Permission[]>(`${API_PREFIX}/permission${status ? `?status=${status}` : ''}`),
+        apiFetch<Permission[]>(`/permission${status ? `?status=${status}` : ''}`),
 
-    getMy: (): Promise<Permission[]> => apiFetch<Permission[]>(`${API_PREFIX}/permission/my`),
+    getMy: (): Promise<Permission[]> => apiFetch<Permission[]>(`/permission/my`),
 
-    getById: (id: string): Promise<Permission> => apiFetch<Permission>(`${API_PREFIX}/permission/${id}`),
+    getById: (id: string): Promise<Permission> => apiFetch<Permission>(`/permission/${id}`),
 
     approveAll: (): Promise<MessageResponse> =>
-        apiFetch<MessageResponse>(`${API_PREFIX}/permission/approve-all`, { method: 'PATCH' }),
+        apiFetch<MessageResponse>(`/permission/approve-all`, { method: 'PATCH' }),
 
     rejectAll: (): Promise<MessageResponse> =>
-        apiFetch<MessageResponse>(`${API_PREFIX}/permission/reject-all`, { method: 'PATCH' }),
+        apiFetch<MessageResponse>(`/permission/reject-all`, { method: 'PATCH' }),
 
     approve: (id: string): Promise<MessageResponse> =>
-        apiFetch<MessageResponse>(`${API_PREFIX}/permission/${id}/approve`, { method: 'PATCH' }),
+        apiFetch<MessageResponse>(`/permission/${id}/approve`, { method: 'PATCH' }),
 
     reject: (id: string): Promise<MessageResponse> =>
-        apiFetch<MessageResponse>(`${API_PREFIX}/permission/${id}/reject`, { method: 'PATCH' }),
+        apiFetch<MessageResponse>(`/permission/${id}/reject`, { method: 'PATCH' }),
 };
 
 // =============================================================
@@ -265,19 +264,19 @@ export const permissionApi = {
 
 export const resumeApi = {
     create: (body: CreateResumeRequest): Promise<MessageResponse> =>
-        apiFetch<MessageResponse>(`${API_PREFIX}/resume`, { method: 'POST', body: JSON.stringify(body) }),
+        apiFetch<MessageResponse>(`/resume`, { method: 'POST', body: JSON.stringify(body) }),
 
-    getAll: (): Promise<Resume[]> => apiFetch<Resume[]>(`${API_PREFIX}/resume`),
+    getAll: (): Promise<Resume[]> => apiFetch<Resume[]>(`/resume`),
 
-    getMy: (): Promise<Resume[]> => apiFetch<Resume[]>(`${API_PREFIX}/resume/my`),
+    getMy: (): Promise<Resume[]> => apiFetch<Resume[]>(`/resume/my`),
 
-    getById: (id: string): Promise<Resume> => apiFetch<Resume>(`${API_PREFIX}/resume/${id}`),
+    getById: (id: string): Promise<Resume> => apiFetch<Resume>(`/resume/${id}`),
 
     update: (id: string, body: Partial<CreateResumeRequest>): Promise<MessageResponse> =>
-        apiFetch<MessageResponse>(`${API_PREFIX}/resume/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+        apiFetch<MessageResponse>(`/resume/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
 
     delete: (id: string): Promise<MessageResponse> =>
-        apiFetch<MessageResponse>(`${API_PREFIX}/resume/${id}`, { method: 'DELETE' }),
+        apiFetch<MessageResponse>(`/resume/${id}`, { method: 'DELETE' }),
 };
 
 // =============================================================
@@ -286,17 +285,17 @@ export const resumeApi = {
 
 export const newsApi = {
     create: (body: CreateNewsRequest): Promise<MessageResponse> =>
-        apiFetch<MessageResponse>(`${API_PREFIX}/news`, { method: 'POST', body: JSON.stringify(body) }),
+        apiFetch<MessageResponse>(`/news`, { method: 'POST', body: JSON.stringify(body) }),
 
-    getAll: (): Promise<News[]> => apiFetch<News[]>(`${API_PREFIX}/news`),
+    getAll: (): Promise<News[]> => apiFetch<News[]>(`/news`),
 
-    getById: (id: string): Promise<News> => apiFetch<News>(`${API_PREFIX}/news/${id}`),
+    getById: (id: string): Promise<News> => apiFetch<News>(`/news/${id}`),
 
     update: (id: string, body: Partial<CreateNewsRequest>): Promise<MessageResponse> =>
-        apiFetch<MessageResponse>(`${API_PREFIX}/news/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+        apiFetch<MessageResponse>(`/news/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
 
     delete: (id: string): Promise<MessageResponse> =>
-        apiFetch<MessageResponse>(`${API_PREFIX}/news/${id}`, { method: 'DELETE' }),
+        apiFetch<MessageResponse>(`/news/${id}`, { method: 'DELETE' }),
 };
 
 // =============================================================
@@ -304,16 +303,16 @@ export const newsApi = {
 // =============================================================
 
 export const notificationApi = {
-    getAll: (): Promise<Notification[]> => apiFetch<Notification[]>(`${API_PREFIX}/notification`),
+    getAll: (): Promise<Notification[]> => apiFetch<Notification[]>(`/notification`),
 
     getUnreadCount: (): Promise<UnreadCountResponse> =>
-        apiFetch<UnreadCountResponse>(`${API_PREFIX}/notification/unread-count`),
+        apiFetch<UnreadCountResponse>(`/notification/unread-count`),
 
     markRead: (id: string): Promise<MessageResponse> =>
-        apiFetch<MessageResponse>(`${API_PREFIX}/notification/${id}/read`, { method: 'PATCH' }),
+        apiFetch<MessageResponse>(`/notification/${id}/read`, { method: 'PATCH' }),
 
     markAllRead: (): Promise<MessageResponse> =>
-        apiFetch<MessageResponse>(`${API_PREFIX}/notification/read-all`, { method: 'PATCH' }),
+        apiFetch<MessageResponse>(`/notification/read-all`, { method: 'PATCH' }),
 };
 
 // =============================================================
@@ -322,10 +321,10 @@ export const notificationApi = {
 
 export const gradingApi = {
     getComposition: (): Promise<GradingComposition> =>
-        apiFetch<GradingComposition>(`${API_PREFIX}/grading/composition`),
+        apiFetch<GradingComposition>(`/grading/composition`),
 
     setComposition: (body: SetGradingCompositionRequest): Promise<GradingComposition> =>
-        apiFetch<GradingComposition>(`${API_PREFIX}/grading/composition`, { method: 'PUT', body: JSON.stringify(body) }),
+        apiFetch<GradingComposition>(`/grading/composition`, { method: 'PUT', body: JSON.stringify(body) }),
 };
 
 // =============================================================
@@ -333,13 +332,13 @@ export const gradingApi = {
 // =============================================================
 
 export const accessWindowApi = {
-    getAll: (): Promise<AccessWindow[]> => apiFetch<AccessWindow[]>(`${API_PREFIX}/access-windows`),
+    getAll: (): Promise<AccessWindow[]> => apiFetch<AccessWindow[]>(`/access-windows`),
 
     create: (body: CreateAccessWindowRequest): Promise<AccessWindow> =>
-        apiFetch<AccessWindow>(`${API_PREFIX}/access-windows`, { method: 'POST', body: JSON.stringify(body) }),
+        apiFetch<AccessWindow>(`/access-windows`, { method: 'POST', body: JSON.stringify(body) }),
 
     update: (id: string, body: Partial<CreateAccessWindowRequest>): Promise<AccessWindow> =>
-        apiFetch<AccessWindow>(`${API_PREFIX}/access-windows/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+        apiFetch<AccessWindow>(`/access-windows/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
 };
 
 // =============================================================
@@ -347,25 +346,25 @@ export const accessWindowApi = {
 // =============================================================
 
 export const iamApi = {
-    getPermissions: (): Promise<IamPermission[]> => apiFetch<IamPermission[]>(`${API_PREFIX}/iam/permissions`),
+    getPermissions: (): Promise<IamPermission[]> => apiFetch<IamPermission[]>(`/iam/permissions`),
 
     createPermission: (body: { name: string; description?: string }): Promise<IamPermission> =>
-        apiFetch<IamPermission>(`${API_PREFIX}/iam/permissions`, { method: 'POST', body: JSON.stringify(body) }),
+        apiFetch<IamPermission>(`/iam/permissions`, { method: 'POST', body: JSON.stringify(body) }),
 
     deletePermission: (id: string): Promise<MessageResponse> =>
-        apiFetch<MessageResponse>(`${API_PREFIX}/iam/permissions/${id}`, { method: 'DELETE' }),
+        apiFetch<MessageResponse>(`/iam/permissions/${id}`, { method: 'DELETE' }),
 
     getRolePermissions: (role: UserRole): Promise<IamPermission[]> =>
-        apiFetch<IamPermission[]>(`${API_PREFIX}/iam/roles/${role}/permissions`),
+        apiFetch<IamPermission[]>(`/iam/roles/${role}/permissions`),
 
     assignPermissionToRole: (role: UserRole, permissionId: string): Promise<MessageResponse> =>
-        apiFetch<MessageResponse>(`${API_PREFIX}/iam/roles/${role}/permissions`, {
+        apiFetch<MessageResponse>(`/iam/roles/${role}/permissions`, {
             method: 'POST',
             body: JSON.stringify({ permissionId }),
         }),
 
     removePermissionFromRole: (role: UserRole, permissionId: string): Promise<MessageResponse> =>
-        apiFetch<MessageResponse>(`${API_PREFIX}/iam/roles/${role}/permissions/${permissionId}`, { method: 'DELETE' }),
+        apiFetch<MessageResponse>(`/iam/roles/${role}/permissions/${permissionId}`, { method: 'DELETE' }),
 };
 
 // =============================================================
@@ -373,18 +372,18 @@ export const iamApi = {
 // =============================================================
 
 export const dashboardApi = {
-    getMyGrades: (): Promise<MyGrade> => apiFetch<MyGrade>(`${API_PREFIX}/dashboard/my-grades`),
+    getMyGrades: (): Promise<MyGrade> => apiFetch<MyGrade>(`/dashboard/my-grades`),
 
-    getAllGrades: (): Promise<StudentGrade[]> => apiFetch<StudentGrade[]>(`${API_PREFIX}/dashboard/all-grades`),
+    getAllGrades: (): Promise<StudentGrade[]> => apiFetch<StudentGrade[]>(`/dashboard/all-grades`),
 
-    getMenteeGrades: (): Promise<StudentGrade[]> => apiFetch<StudentGrade[]>(`${API_PREFIX}/dashboard/mentee-grades`),
+    getMenteeGrades: (): Promise<StudentGrade[]> => apiFetch<StudentGrade[]>(`/dashboard/mentee-grades`),
 
     getStudentGrades: (id: string): Promise<StudentGrade> =>
-        apiFetch<StudentGrade>(`${API_PREFIX}/dashboard/student/${id}`),
+        apiFetch<StudentGrade>(`/dashboard/student/${id}`),
 
     exportExcel: async (): Promise<void> => {
         const token = getToken();
-        const response = await fetch(`${API_BASE}${API_PREFIX}/dashboard/export/excel`, {
+        const response = await fetch(`${API_BASE}/dashboard/export/excel`, {
             headers: { Authorization: `Bearer ${token ?? ''}` },
         });
         if (!response.ok) throw new Error(`Export gagal: ${response.status}`);
