@@ -2,15 +2,27 @@
  * =============================================================
  * SIMETA CMS — API Service Layer v2
  * =============================================================
+ *
+ * FIX S2 (Sync) — Fungsi `normNama()` (walker rekursif yang me-rename
+ * setiap key "nama" jadi "name") sudah DIHAPUS. Backend Prisma sekarang
+ * mengembalikan property `name` langsung (kolom DB tetap "nama" via @map),
+ * sehingga workaround di FE tidak lagi diperlukan.
+ *
+ * Request body untuk create/update reference data sekarang juga memakai
+ * `name` (sebelumnya FE mengirim `{ nama: body.name }` untuk mencocokkan
+ * DTO lama). DTO backend (`reference-data.dto.ts`) sudah diselaraskan.
  */
 
 import type {
     LoginRequest,
     LoginResponse,
+    RegisterAsRequest,
     User,
     UserRole,
     AttendanceSession,
     AttendanceRecord,
+    AttendanceSessionDetail,
+    AttendanceStatus,
     CreateSessionRequest,
     MentoringGroup,
     MentoringMember,
@@ -31,7 +43,9 @@ import type {
     PermissionStatus,
     CreatePermissionRequest,
     Resume,
+    ResumeSession,
     CreateResumeRequest,
+    CreateResumeSessionRequest,
     News,
     CreateNewsRequest,
     Notification,
@@ -44,13 +58,40 @@ import type {
     StudentGrade,
     MyGrade,
     MessageResponse,
+    Jurusan,
+    Prodi,
+    Kelas,
+    Kategori,
+    DosenKelas,
+    AssignDosenKelasRequest,
+    AcademicYear,
+    Semester,
+    Enrollment,
+    EnrollmentMahasiswaType,
+    CreateAcademicYearRequest,
+    CreateSemesterRequest,
+    CreateEnrollmentRequest,
+    UpdateEnrollmentRequest,
+    BulkEnrollRequest,
+    BulkEnrollResult,
+    CopyFromSemesterRequest,
+    CopyFromSemesterResult,
 } from '@/types';
 
-const API_BASE: string = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001').replace(/\/$/, '');
+const API_BASE: string = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1').replace(/\/$/, '');
 
+/**
+ * FIX F3-4 — `getToken` dipertahankan untuk kompatibilitas API publik
+ * (mis. exportExcel di bawah), tapi selalu mengembalikan null karena JWT
+ * sekarang berada di cookie httpOnly yang tidak dapat dibaca JS. Komponen
+ * yang ingin tahu user-state harus pakai `useAuth().user`.
+ *
+ * @deprecated Token tidak lagi accessible — selalu null. Pertahankan import
+ *   yang sudah ada di codebase agar tidak break compile; pengembang baru
+ *   sebaiknya tidak memakai fungsi ini.
+ */
 export function getToken(): string | null {
-    if (typeof window === 'undefined') return null;
-    return localStorage.getItem('simeta_token');
+    return null;
 }
 
 export function getDeviceId(): string {
@@ -64,19 +105,18 @@ export function getDeviceId(): string {
 }
 
 async function apiFetch<T = unknown>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const token = getToken();
-
     const headers: Record<string, string> = {
         'Content-Type': 'application/json',
+        'X-Platform': 'web',
         ...(options.headers as Record<string, string>),
     };
 
-    if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-    }
-
+    // FIX F3-4 — `credentials: 'include'` membuat browser otomatis mengirim
+    // cookie `simeta_token` ke backend (cross-origin sekalipun, asalkan CORS
+    // backend men-set Access-Control-Allow-Credentials: true — sudah).
     const response = await fetch(`${API_BASE}${endpoint}`, {
         ...options,
+        credentials: 'include',
         headers,
     });
 
@@ -100,11 +140,28 @@ async function apiFetch<T = unknown>(endpoint: string, options: RequestInit = {}
 // =============================================================
 
 export const authApi = {
+    // FIX F3-4 — Response login untuk klien web TIDAK lagi membawa
+    // access_token / refresh_token (backend men-set keduanya sebagai cookie
+    // httpOnly). Type `LoginResponse` lama tetap dipakai agar interface
+    // kontrak (mobile) tidak berubah; field token akan undefined di web.
     login: (body: LoginRequest): Promise<LoginResponse> =>
         apiFetch<LoginResponse>(`/auth/login`, { method: 'POST', body: JSON.stringify(body) }),
 
+    // FIX F3-4 — logout sekarang round-trip ke backend supaya cookie httpOnly
+    // di-clear (browser hanya menghapus cookie yang Set-Cookie ulang dengan
+    // Max-Age=0). Sebelumnya frontend hanya menghapus localStorage.
+    logout: (): Promise<MessageResponse> =>
+        apiFetch<MessageResponse>(`/auth/logout`, { method: 'POST', body: JSON.stringify({}) }),
+
     register: (body: { name: string; email: string; password: string }): Promise<MessageResponse> =>
         apiFetch<MessageResponse>(`/auth/register`, { method: 'POST', body: JSON.stringify(body) }),
+
+    registerAs: (body: RegisterAsRequest): Promise<MessageResponse> =>
+        apiFetch<MessageResponse>(`/auth/register-as`, { method: 'POST', body: JSON.stringify(body) }),
+
+    // FIX S2 — sebelumnya .then(normNama<User>). Backend sekarang langsung
+    // mengembalikan `name` untuk jurusan/prodi/kelas/kategori.
+    getMe: (): Promise<User> => apiFetch<User>(`/auth/me`),
 };
 
 // =============================================================
@@ -116,6 +173,8 @@ export const usersApi = {
 
     getById: (id: string): Promise<User> => apiFetch<User>(`/users/${id}`),
 
+    getParticipants: (): Promise<User[]> => apiFetch<User[]>(`/users/participants`),
+
     assignRole: (id: string, role: UserRole): Promise<MessageResponse> =>
         apiFetch<MessageResponse>(`/users/${id}/role`, { method: 'PATCH', body: JSON.stringify({ role }) }),
 
@@ -124,6 +183,79 @@ export const usersApi = {
 
     delete: (id: string): Promise<MessageResponse> =>
         apiFetch<MessageResponse>(`/users/${id}`, { method: 'DELETE' }),
+};
+
+// =============================================================
+// 2b. REFERENCE DATA API
+// =============================================================
+
+export const referenceApi = {
+    // Jurusan
+    getJurusan: (): Promise<Jurusan[]> => apiFetch<Jurusan[]>(`/reference/jurusan`),
+    createJurusan: (body: { name: string }): Promise<Jurusan> =>
+        apiFetch<Jurusan>(`/reference/jurusan`, { method: 'POST', body: JSON.stringify({ name: body.name }) }),
+    updateJurusan: (id: string, body: { name: string }): Promise<Jurusan> =>
+        apiFetch<Jurusan>(`/reference/jurusan/${id}`, { method: 'PATCH', body: JSON.stringify({ name: body.name }) }),
+    deleteJurusan: (id: string): Promise<MessageResponse> =>
+        apiFetch<MessageResponse>(`/reference/jurusan/${id}`, { method: 'DELETE' }),
+
+    // Prodi
+    getProdi: (jurusanId?: string): Promise<Prodi[]> =>
+        apiFetch<Prodi[]>(`/reference/prodi${jurusanId ? `?jurusanId=${jurusanId}` : ''}`),
+    createProdi: (body: { name: string; jurusanId: string }): Promise<Prodi> =>
+        apiFetch<Prodi>(`/reference/prodi`, {
+            method: 'POST',
+            body: JSON.stringify({ name: body.name, jurusanId: body.jurusanId }),
+        }),
+    updateProdi: (id: string, body: { name?: string; jurusanId?: string }): Promise<Prodi> =>
+        apiFetch<Prodi>(`/reference/prodi/${id}`, {
+            method: 'PATCH',
+            body: JSON.stringify({
+                ...(body.name !== undefined && { name: body.name }),
+                ...(body.jurusanId !== undefined && { jurusanId: body.jurusanId }),
+            }),
+        }),
+    deleteProdi: (id: string): Promise<MessageResponse> =>
+        apiFetch<MessageResponse>(`/reference/prodi/${id}`, { method: 'DELETE' }),
+
+    // Kelas
+    getKelas: (prodiId?: string): Promise<Kelas[]> =>
+        apiFetch<Kelas[]>(`/reference/kelas${prodiId ? `?prodiId=${prodiId}` : ''}`),
+    createKelas: (body: { name: string; prodiId?: string }): Promise<Kelas> =>
+        apiFetch<Kelas>(`/reference/kelas`, {
+            method: 'POST',
+            body: JSON.stringify({ name: body.name, ...(body.prodiId && { prodiId: body.prodiId }) }),
+        }),
+    updateKelas: (id: string, body: { name?: string; prodiId?: string }): Promise<Kelas> =>
+        apiFetch<Kelas>(`/reference/kelas/${id}`, {
+            method: 'PATCH',
+            body: JSON.stringify({
+                ...(body.name !== undefined && { name: body.name }),
+                ...(body.prodiId !== undefined && { prodiId: body.prodiId }),
+            }),
+        }),
+    deleteKelas: (id: string): Promise<MessageResponse> =>
+        apiFetch<MessageResponse>(`/reference/kelas/${id}`, { method: 'DELETE' }),
+
+    // Kategori
+    getKategori: (): Promise<Kategori[]> => apiFetch<Kategori[]>(`/reference/kategori`),
+    createKategori: (body: { name: string }): Promise<Kategori> =>
+        apiFetch<Kategori>(`/reference/kategori`, { method: 'POST', body: JSON.stringify({ name: body.name }) }),
+    updateKategori: (id: string, body: { name: string }): Promise<Kategori> =>
+        apiFetch<Kategori>(`/reference/kategori/${id}`, { method: 'PATCH', body: JSON.stringify({ name: body.name }) }),
+    deleteKategori: (id: string): Promise<MessageResponse> =>
+        apiFetch<MessageResponse>(`/reference/kategori/${id}`, { method: 'DELETE' }),
+
+    // Dosen–Kelas assignment
+    assignDosenKelas: (body: AssignDosenKelasRequest): Promise<DosenKelas> =>
+        apiFetch<DosenKelas>(`/reference/dosen-kelas`, { method: 'POST', body: JSON.stringify(body) }),
+    removeDosenKelas: (id: string): Promise<MessageResponse> =>
+        apiFetch<MessageResponse>(`/reference/dosen-kelas/${id}`, { method: 'DELETE' }),
+    getKelasByDosen: (dosenId: string): Promise<DosenKelas[]> =>
+        apiFetch<DosenKelas[]>(`/reference/dosen/${dosenId}/kelas`),
+    getDosenByKelas: (kelasId: string): Promise<DosenKelas[]> =>
+        apiFetch<DosenKelas[]>(`/reference/kelas/${kelasId}/dosen`),
+    getMyKelas: (): Promise<DosenKelas[]> => apiFetch<DosenKelas[]>(`/reference/dosen/my-kelas`),
 };
 
 // =============================================================
@@ -139,10 +271,17 @@ export const attendanceApi = {
 
     getAll: (): Promise<AttendanceSession[]> => apiFetch<AttendanceSession[]>(`/attendance`),
 
-    getById: (id: string): Promise<AttendanceRecord> => apiFetch<AttendanceRecord>(`/attendance/${id}`),
+    getSessionDetail: (id: string): Promise<AttendanceSessionDetail> =>
+        apiFetch<AttendanceSessionDetail>(`/attendance/${id}`),
 
-    update: (id: string, body: Partial<AttendanceRecord>): Promise<AttendanceRecord> =>
-        apiFetch<AttendanceRecord>(`/attendance/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+    update: (id: string, body: { title?: string; startTime?: string; endTime?: string }): Promise<AttendanceSession> =>
+        apiFetch<AttendanceSession>(`/attendance/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+
+    updateRecord: (sessionId: string, recordId: string, status: AttendanceStatus): Promise<MessageResponse> =>
+        apiFetch<MessageResponse>(`/attendance/${sessionId}/records/${recordId}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ status }),
+        }),
 
     delete: (id: string): Promise<MessageResponse> =>
         apiFetch<MessageResponse>(`/attendance/${id}`, { method: 'DELETE' }),
@@ -280,7 +419,29 @@ export const resumeApi = {
 };
 
 // =============================================================
-// 9. NEWS API
+// 9. RESUME SESSION API
+// NOTE: Requires backend endpoints under /resume/sessions
+// =============================================================
+
+export const resumeSessionApi = {
+    getAll: (): Promise<ResumeSession[]> =>
+        apiFetch<ResumeSession[]>(`/resume/sessions`),
+
+    getById: (id: string): Promise<ResumeSession> =>
+        apiFetch<ResumeSession>(`/resume/sessions/${id}`),
+
+    create: (body: CreateResumeSessionRequest): Promise<ResumeSession> =>
+        apiFetch<ResumeSession>(`/resume/sessions`, { method: 'POST', body: JSON.stringify(body) }),
+
+    update: (id: string, body: Partial<CreateResumeSessionRequest>): Promise<ResumeSession> =>
+        apiFetch<ResumeSession>(`/resume/sessions/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+
+    delete: (id: string): Promise<MessageResponse> =>
+        apiFetch<MessageResponse>(`/resume/sessions/${id}`, { method: 'DELETE' }),
+};
+
+// =============================================================
+// 10. NEWS API
 // =============================================================
 
 export const newsApi = {
@@ -354,8 +515,11 @@ export const iamApi = {
     deletePermission: (id: string): Promise<MessageResponse> =>
         apiFetch<MessageResponse>(`/iam/permissions/${id}`, { method: 'DELETE' }),
 
-    getRolePermissions: (role: UserRole): Promise<IamPermission[]> =>
-        apiFetch<IamPermission[]>(`/iam/roles/${role}/permissions`),
+    getRolePermissions: async (role: UserRole): Promise<IamPermission[]> => {
+        type RolePerm = { id: string; role: UserRole; permissionId: string; permission: IamPermission };
+        const items = await apiFetch<RolePerm[]>(`/iam/roles/${role}/permissions`);
+        return items.map((item) => item.permission);
+    },
 
     assignPermissionToRole: (role: UserRole, permissionId: string): Promise<MessageResponse> =>
         apiFetch<MessageResponse>(`/iam/roles/${role}/permissions`, {
@@ -382,9 +546,11 @@ export const dashboardApi = {
         apiFetch<StudentGrade>(`/dashboard/student/${id}`),
 
     exportExcel: async (): Promise<void> => {
-        const token = getToken();
+        // FIX F3-4 — `credentials: 'include'` mengirim cookie httpOnly otomatis;
+        // tidak perlu lagi membaca token dari JS (tidak akan bisa).
         const response = await fetch(`${API_BASE}/dashboard/export/excel`, {
-            headers: { Authorization: `Bearer ${token ?? ''}` },
+            credentials: 'include',
+            headers: { 'X-Platform': 'web' },
         });
         if (!response.ok) throw new Error(`Export gagal: ${response.status}`);
         const blob = await response.blob();
@@ -396,6 +562,111 @@ export const dashboardApi = {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+    },
+};
+
+// =============================================================
+// 14B. SEMESTER / ACADEMIC YEAR / ENROLLMENT API (METAGAMA)
+// =============================================================
+// Backend Mei 2026: aktivitas Metagama di-scope ke Semester.
+// Lihat simeta-backend/docs/SEMESTER_MIGRATION.md untuk detail.
+
+export const academicYearApi = {
+    list: (): Promise<AcademicYear[]> => apiFetch<AcademicYear[]>(`/academic-years`),
+
+    getById: (id: string): Promise<AcademicYear> =>
+        apiFetch<AcademicYear>(`/academic-years/${id}`),
+
+    create: (body: CreateAcademicYearRequest): Promise<AcademicYear> =>
+        apiFetch<AcademicYear>(`/academic-years`, { method: 'POST', body: JSON.stringify(body) }),
+
+    update: (id: string, body: Partial<CreateAcademicYearRequest>): Promise<AcademicYear> =>
+        apiFetch<AcademicYear>(`/academic-years/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+
+    delete: (id: string): Promise<MessageResponse> =>
+        apiFetch<MessageResponse>(`/academic-years/${id}`, { method: 'DELETE' }),
+};
+
+export const semesterApi = {
+    list: (academicYearId?: string): Promise<Semester[]> => {
+        const qs = academicYearId ? `?academicYearId=${academicYearId}` : '';
+        return apiFetch<Semester[]>(`/semesters${qs}`);
+    },
+
+    getActive: (): Promise<Semester> => apiFetch<Semester>(`/semesters/active`),
+
+    getById: (id: string): Promise<Semester> => apiFetch<Semester>(`/semesters/${id}`),
+
+    create: (body: CreateSemesterRequest): Promise<Semester> =>
+        apiFetch<Semester>(`/semesters`, { method: 'POST', body: JSON.stringify(body) }),
+
+    update: (id: string, body: Partial<Pick<CreateSemesterRequest, 'name' | 'startDate' | 'endDate'>>): Promise<Semester> =>
+        apiFetch<Semester>(`/semesters/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+
+    activate: (id: string): Promise<Semester> =>
+        apiFetch<Semester>(`/semesters/${id}/activate`, { method: 'PATCH' }),
+
+    delete: (id: string): Promise<MessageResponse> =>
+        apiFetch<MessageResponse>(`/semesters/${id}`, { method: 'DELETE' }),
+};
+
+export const enrollmentApi = {
+    list: (
+        semesterId: string,
+        opts?: { activeOnly?: boolean; mahasiswaType?: EnrollmentMahasiswaType },
+    ): Promise<Enrollment[]> => {
+        const params = new URLSearchParams({ semesterId });
+        if (opts?.activeOnly) params.set('activeOnly', 'true');
+        if (opts?.mahasiswaType) params.set('mahasiswaType', opts.mahasiswaType);
+        return apiFetch<Enrollment[]>(`/enrollments?${params.toString()}`);
+    },
+
+    getMyHistory: (): Promise<Enrollment[]> => apiFetch<Enrollment[]>(`/enrollments/my-history`),
+
+    getById: (id: string): Promise<Enrollment> => apiFetch<Enrollment>(`/enrollments/${id}`),
+
+    create: (body: CreateEnrollmentRequest): Promise<Enrollment> =>
+        apiFetch<Enrollment>(`/enrollments`, { method: 'POST', body: JSON.stringify(body) }),
+
+    update: (id: string, body: UpdateEnrollmentRequest): Promise<Enrollment> =>
+        apiFetch<Enrollment>(`/enrollments/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+
+    delete: (id: string): Promise<MessageResponse> =>
+        apiFetch<MessageResponse>(`/enrollments/${id}`, { method: 'DELETE' }),
+
+    bulk: (body: BulkEnrollRequest): Promise<BulkEnrollResult> =>
+        apiFetch<BulkEnrollResult>(`/enrollments/bulk`, { method: 'POST', body: JSON.stringify(body) }),
+
+    copyFromSemester: (body: CopyFromSemesterRequest): Promise<CopyFromSemesterResult> =>
+        apiFetch<CopyFromSemesterResult>(`/enrollments/copy-from-semester`, {
+            method: 'POST',
+            body: JSON.stringify(body),
+        }),
+};
+
+// =============================================================
+// 15. UPLOAD API — File upload to Google Drive via backend
+// NOTE: Requires new backend endpoint POST /api/v1/upload
+// =============================================================
+
+export const uploadApi = {
+    uploadFile: async (file: File, options?: { folderId?: string }): Promise<{ url: string; fileId: string }> => {
+        // FIX F3-4 — cookie httpOnly dikirim otomatis lewat `credentials: 'include'`.
+        const formData = new FormData();
+        formData.append('file', file);
+        if (options?.folderId) formData.append('folderId', options.folderId);
+        const response = await fetch(`${API_BASE}/upload`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'X-Platform': 'web' },
+            body: formData,
+        });
+        if (!response.ok) {
+            const raw = await response.json().catch(() => ({}));
+            throw new Error(raw?.message || `Upload gagal: ${response.status}`);
+        }
+        const raw = await response.json();
+        return (raw?.data ?? raw) as { url: string; fileId: string };
     },
 };
 

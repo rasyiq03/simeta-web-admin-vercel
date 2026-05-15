@@ -806,7 +806,7 @@ export interface components {
         };
         AssignRoleDto: {
             /** @enum {string} */
-            role: "ADMIN" | "DOSEN" | "MENTOR" | "MAHASISWA";
+            role: "ADMIN" | "MAHASISWA" | "DOSEN" | "PANITIA";
         };
         CreateSessionDto: {
             title: string;

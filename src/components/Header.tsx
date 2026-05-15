@@ -8,16 +8,19 @@ import { useAuth } from '@/lib/auth-context';
 import styles from './Header.module.css';
 
 const pageTitles: Record<string, string> = {
-    '/dashboard':              'Dashboard',
-    '/dashboard/users':        'Manajemen Pengguna',
-    '/dashboard/attendance':   'Absensi',
-    '/dashboard/mentoring':    'Mentoring & Hafalan',
-    '/dashboard/quiz':         'Kuis',
-    '/dashboard/permission':   'Pengajuan Izin',
-    '/dashboard/resume':       'Resume',
-    '/dashboard/news':         'Berita',
-    '/dashboard/notifications':'Notifikasi',
-    '/dashboard/grades':       'Nilai & Ranking',
+    '/dashboard':               'Dashboard',
+    '/dashboard/users':         'Manajemen Pengguna',
+    '/dashboard/participants':  'Data Peserta',
+    '/dashboard/attendance':    'Absensi',
+    '/dashboard/mentoring':     'Mentoring & Hafalan',
+    '/dashboard/quiz':          'Kuis',
+    '/dashboard/permission':    'Pengajuan Izin',
+    '/dashboard/resume':        'Resume',
+    '/dashboard/news':          'Berita',
+    '/dashboard/notifications': 'Notifikasi',
+    '/dashboard/grades':        'Nilai & Ranking',
+    '/dashboard/grading':       'Komposisi Nilai',
+    '/dashboard/iam':           'Manajemen Akses',
 };
 
 export default function Header(): React.JSX.Element {

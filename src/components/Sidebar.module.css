@@ -8,12 +8,13 @@
     background: linear-gradient(180deg, #0e1649 0%, #0a1035 60%, #080d2a 100%);
     display: flex;
     flex-direction: column;
-    z-index: 100;
+    z-index: 200;
     overflow-y: auto;
     overflow-x: hidden;
     border-right: 1px solid rgba(255,255,255,0.04);
     scrollbar-width: thin;
     scrollbar-color: rgba(255,255,255,0.1) transparent;
+    transition: transform var(--transition-base), box-shadow var(--transition-base);
 }
 
 .sidebar::-webkit-scrollbar { width: 4px; }
@@ -213,15 +214,62 @@
     color: #F87171;
 }
 
+/* ── Hamburger button (mobile only) ── */
+.hamburger {
+    display: none;
+    position: fixed;
+    top: 14px;
+    left: 14px;
+    z-index: 300;
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-md);
+    background: var(--color-navy);
+    color: #fff;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow-md);
+    transition: background var(--transition-fast);
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+.hamburger:hover { background: var(--color-navy-light); }
+
+/* ── Overlay backdrop (mobile only) ── */
+.overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(8, 13, 42, 0.65);
+    backdrop-filter: blur(4px);
+    z-index: 199;
+    animation: fadeIn 200ms ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+/* ── Responsive: Tablet (769-1024px) ── */
+@media (max-width: 1024px) and (min-width: 769px) {
+    .sidebar { width: 220px; }
+    .brandName { font-size: 0.9375rem; }
+}
+
+/* ── Responsive: Mobile (≤768px) ── */
 @media (max-width: 768px) {
-    .sidebar { width: var(--sidebar-collapsed); }
-    .brandText,
-    .navText,
-    .navLabel,
-    .userDetails,
-    .activeIndicator { display: none; }
-    .brand { justify-content: center; padding: var(--space-4) var(--space-2); }
-    .navItem { justify-content: center; padding: 10px; }
-    .footer { flex-direction: column; padding: var(--space-3); }
-    .userInfo { justify-content: center; }
+    .hamburger { display: flex; }
+    .overlay   { display: block; }
+
+    .sidebar {
+        transform: translateX(-100%);
+        width: var(--sidebar-width);
+        box-shadow: none;
+    }
+
+    .sidebarOpen {
+        transform: translateX(0);
+        box-shadow: 4px 0 40px rgba(8, 13, 42, 0.5);
+    }
 }

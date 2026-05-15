@@ -17,7 +17,10 @@ export default function LoginPage(): React.JSX.Element {
     const [email, setEmail] = useState<string>('');
     const [password, setPassword] = useState<string>('');
     const [isLoading, setIsLoading] = useState<boolean>(false);
-    const { login, user } = useAuth();
+    // FIX F3-4 — `login()` lama (yang menerima access token) sudah tidak ada
+    // karena token kini di cookie httpOnly. Gunakan `refreshSession()` untuk
+    // memuat user state dari /auth/me setelah cookie ter-set oleh response.
+    const { refreshSession, user } = useAuth();
     const { showToast } = useToast();
     const router = useRouter();
 
@@ -35,8 +38,10 @@ export default function LoginPage(): React.JSX.Element {
 
         setIsLoading(true);
         try {
-            const data = await authApi.login({ email, password, deviceId: getDeviceId() });
-            login(data.access_token);
+            // Backend men-set cookie httpOnly di response; kita tidak perlu
+            // (dan tidak bisa) membaca access_token dari body.
+            await authApi.login({ email, password, deviceId: getDeviceId() });
+            await refreshSession();
             showToast('Login berhasil!', 'success');
         } catch (err) {
             showToast((err as Error).message || 'Login gagal', 'error');

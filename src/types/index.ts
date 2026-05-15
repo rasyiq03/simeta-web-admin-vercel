@@ -15,8 +15,9 @@ export interface JWTPayload {
 }
 
 export interface LoginResponse {
-    message: string;
     access_token: string;
+    token_type: string;
+    user: { id: string; name: string; email: string; role: UserRole };
 }
 
 export interface LoginRequest {
@@ -30,11 +31,19 @@ export interface RegisterAsRequest {
     email: string;
     password: string;
     role: UserRole;
+    nim?: string;
+    gender?: Gender;
+    jurusanId?: string;
+    prodiId?: string;
+    kelasId?: string;
+    kategoriId?: string;
 }
 
 // ─── User Types ─── //
 
-export type UserRole = 'ADMIN' | 'PANITIA' | 'DOSEN' | 'MENTOR' | 'MENTEE';
+export type UserRole = 'ADMIN' | 'PANITIA' | 'DOSEN' | 'MENTOR' | 'MENTEE' | 'PESERTA';
+
+export type Gender = 'LAKI_LAKI' | 'PEREMPUAN';
 
 export interface User {
     id: string;
@@ -45,6 +54,12 @@ export interface User {
     leaveQuota: number;
     createdAt: string;
     updatedAt?: string;
+    nim?: string;
+    gender?: Gender;
+    jurusan?: { id: string; name: string };
+    prodi?: { id: string; name: string };
+    kelas?: { id: string; name: string };
+    kategori?: { id: string; name: string };
 }
 
 export interface BulkCreateUserItem {
@@ -52,6 +67,11 @@ export interface BulkCreateUserItem {
     email: string;
     password: string;
     role?: UserRole;
+    nim?: string;
+    kelas?: string;
+    prodi?: string;
+    jurusan?: string;
+    gender?: Gender;
 }
 
 export interface BulkCreateUserRequest {
@@ -62,6 +82,182 @@ export interface BulkCreateResult {
     success: number;
     failed: number;
     errors: Array<{ email: string; message: string }>;
+}
+
+// ─── Reference Data Types ─── //
+
+export interface Jurusan {
+    id: string;
+    name: string;
+    _count?: { prodis: number };
+}
+
+export interface Prodi {
+    id: string;
+    name: string;
+    jurusanId: string;
+    jurusan?: { id: string; name: string };
+    _count?: { kelas: number };
+}
+
+export interface Kelas {
+    id: string;
+    name: string;
+    prodiId: string;
+    prodi?: { id: string; name: string };
+    _count?: { members: number };
+}
+
+export interface Kategori {
+    id: string;
+    name: string;
+}
+
+export interface DosenKelas {
+    id: string;
+    dosenId: string;
+    kelasId: string;
+    dosen?: { id: string; name: string; email: string };
+    kelas?: Kelas & { prodi?: Prodi };
+}
+
+export interface AssignDosenKelasRequest {
+    dosenId: string;
+    kelasId: string;
+}
+
+// ─── METAGAMA — Academic Year / Semester / Enrollment ─── //
+
+export type SemesterTerm = 'GANJIL' | 'GENAP' | 'PENDEK';
+
+export type EnrollmentMahasiswaType = 'REGULAR' | 'MENTOR' | 'MENTEE';
+
+export interface AcademicYear {
+    id: string;
+    code: string;        // "2026/2027"
+    name: string;
+    startDate: string;
+    endDate: string;
+    createdBy: string | null;
+    createdAt: string;
+    updatedAt: string;
+    semesters?: SemesterSummary[];
+    _count?: { semesters: number };
+}
+
+export interface SemesterSummary {
+    id: string;
+    code: string;
+    term: SemesterTerm;
+    isActive: boolean;
+    startDate: string;
+    endDate: string;
+}
+
+export interface Semester {
+    id: string;
+    academicYearId: string;
+    code: string;        // "2026-2027-GANJIL"
+    name: string;
+    term: SemesterTerm;
+    startDate: string;
+    endDate: string;
+    isActive: boolean;
+    createdBy: string | null;
+    createdAt: string;
+    updatedAt: string;
+    academicYear?: { id: string; code: string; name: string };
+    _count?: {
+        enrollments?: number;
+        attendanceSessions?: number;
+        quizzes?: number;
+        bamSessions?: number;
+        mentoringGroups?: number;
+        accessWindows?: number;
+        gradingRules?: number;
+    };
+}
+
+export interface CreateAcademicYearRequest {
+    code: string;
+    name: string;
+    startDate: string;
+    endDate: string;
+}
+
+export interface CreateSemesterRequest {
+    academicYearId: string;
+    code: string;
+    name: string;
+    term: SemesterTerm;
+    startDate: string;
+    endDate: string;
+    isActive?: boolean;
+}
+
+export interface Enrollment {
+    id: string;
+    userId: string;
+    semesterId: string;
+    mahasiswaType: EnrollmentMahasiswaType;
+    kelasId: string | null;
+    kategoriId: string | null;
+    notes: string | null;
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string;
+    user?: { id: string; name: string; email: string; nim: string | null };
+    semester?: Semester;
+}
+
+export interface CreateEnrollmentRequest {
+    userId: string;
+    semesterId: string;
+    mahasiswaType?: EnrollmentMahasiswaType;
+    kelasId?: string;
+    kategoriId?: string;
+    notes?: string;
+}
+
+export interface UpdateEnrollmentRequest {
+    mahasiswaType?: EnrollmentMahasiswaType;
+    kelasId?: string;
+    kategoriId?: string;
+    isActive?: boolean;
+    notes?: string;
+}
+
+export interface BulkEnrollmentItem {
+    userId: string;
+    mahasiswaType?: EnrollmentMahasiswaType;
+    kelasId?: string;
+    kategoriId?: string;
+}
+
+export interface BulkEnrollRequest {
+    semesterId: string;
+    items: BulkEnrollmentItem[];
+}
+
+export interface BulkEnrollResult {
+    created: number;
+    skipped: number;
+    invalid: { userId: string; reason: string }[];
+    total: number;
+}
+
+export interface CopyFromSemesterRequest {
+    sourceSemesterId: string;
+    targetSemesterId: string;
+    onlyActive?: boolean;
+}
+
+export interface CopyFromSemesterResult {
+    copiedFrom: string;
+    copiedTo: string;
+    created: number;
+    skipped: number;
+    sourceTotal: number;
 }
 
 // ─── Attendance Types ─── //
@@ -81,9 +277,24 @@ export interface AttendanceRecord {
     userId: string;
     sessionId: string;
     checkInTime: string;
+    checkOutTime?: string | null;
     status: AttendanceStatus;
     latitude: number | null;
     longitude: number | null;
+}
+
+export interface AttendanceRecordDetail {
+    id: string;
+    userId: string;
+    sessionId: string;
+    checkInTime: string | null;
+    checkOutTime?: string | null;
+    status: AttendanceStatus;
+    user?: { id: string; name: string; email: string; role: UserRole };
+}
+
+export interface AttendanceSessionDetail extends AttendanceSession {
+    records: AttendanceRecordDetail[];
 }
 
 export interface CreateSessionRequest {
@@ -136,6 +347,8 @@ export interface AutoGenerateGroupRequest {
     mentorIds?: string[];
     menteeIds?: string[];
     namePrefix?: string;
+    respectGender?: boolean;
+    respectKategori?: boolean;
 }
 
 export interface AutoGenerateGroupResult {
@@ -271,19 +484,40 @@ export interface CreatePermissionRequest {
 
 // ─── Resume Types ─── //
 
+export interface ResumeSession {
+    id: string;
+    title: string;
+    description?: string;
+    openAt: string;
+    closeAt: string;
+    isOpen?: boolean;
+    createdAt: string;
+    _count?: { resumes: number };
+}
+
+export interface CreateResumeSessionRequest {
+    title: string;
+    description?: string;
+    openAt: string;
+    closeAt: string;
+}
+
 export interface Resume {
     id: string;
     userId: string;
+    sessionId?: string;
     content: string;
     fileUrl?: string;
     createdAt: string;
     updatedAt: string;
     user?: { id: string; name: string; email: string; role: UserRole };
+    session?: { id: string; title: string; closeAt: string };
 }
 
 export interface CreateResumeRequest {
     content: string;
     fileUrl?: string;
+    sessionId?: string;
 }
 
 // ─── News Types ─── //

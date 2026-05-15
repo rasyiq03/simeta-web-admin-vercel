@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, type ChangeEvent } from 'react';
-import { mentoringApi, usersApi } from '@/lib/api';
+import { mentoringApi, usersApi, exportToCSV } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import { useToast } from '@/lib/toast-context';
 import Modal from '@/components/Modal';
@@ -209,6 +209,18 @@ export default function MentoringPage(): React.JSX.Element {
         } catch (err) { showToast((err as Error).message, 'error'); }
     };
 
+    const handleExportGroups = () => {
+        const headers = ['Nama Kelompok', 'Kategori', 'Mentor', 'Email Mentor', 'Jumlah Anggota'];
+        const rows = groups.map((g) => [
+            g.name,
+            CATEGORY_LABEL[g.category],
+            g.mentor?.name || '-',
+            g.mentor?.email || '-',
+            g.members.length,
+        ]);
+        exportToCSV('daftar-kelompok-mentoring.csv', headers, rows);
+    };
+
     // ── Mentees available to add (not yet in any group shown) ──
     const assignedMenteeIds = new Set(groups.flatMap((g) => g.members.map((m) => m.menteeId)));
     const availableMentees = mentees.filter((u) => !assignedMenteeIds.has(u.id));
@@ -223,16 +235,24 @@ export default function MentoringPage(): React.JSX.Element {
                         {isManager ? 'Kelola kelompok mentoring, anggota, dan laporan hafalan' : 'Kelompok mentoring dan setoran hafalan'}
                     </p>
                 </div>
-                {isManager && (
-                    <div style={{ display: 'flex', gap: 8 }}>
-                        <button className="btn btn-outline btn-sm" onClick={() => setAutoGenModal(true)}>
-                            ⚡ Auto-Generate
-                        </button>
-                        <button className="btn btn-primary btn-sm" onClick={() => { setGroupForm(DEFAULT_GROUP_FORM); setCreateModal(true); }}>
-                            + Buat Kelompok
-                        </button>
-                    </div>
-                )}
+                <div className="page-actions">
+                    <button className="btn btn-outline btn-sm" onClick={handleExportGroups} disabled={groups.length === 0}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                        Export CSV
+                    </button>
+                    {isManager && (
+                        <div style={{ display: 'flex', gap: 8 }}>
+                            <button className="btn btn-outline btn-sm" onClick={() => setAutoGenModal(true)}>
+                                ⚡ Auto-Generate
+                            </button>
+                            <button className="btn btn-primary btn-sm" onClick={() => { setGroupForm(DEFAULT_GROUP_FORM); setCreateModal(true); }}>
+                                + Buat Kelompok
+                            </button>
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* ── Category Filter (manager only) ── */}

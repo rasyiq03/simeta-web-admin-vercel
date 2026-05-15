@@ -12,6 +12,7 @@ import { useState, useEffect, useCallback, type ChangeEvent } from 'react';
 import { newsApi } from '@/lib/api';
 import { useToast } from '@/lib/toast-context';
 import Modal from '@/components/Modal';
+import ImageUpload from '@/components/ImageUpload';
 import type { News, CreateNewsRequest } from '@/types';
 
 /** State modal form berita */
@@ -172,12 +173,11 @@ export default function NewsPage(): React.JSX.Element {
                             onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setForm({ ...form, content: e.target.value })}
                             style={{ minHeight: 150 }} />
                     </div>
-                    <div className="form-group">
-                        <label className="form-label">URL Gambar (Opsional)</label>
-                        <input className="form-input" placeholder="https://storage.example.com/poster.jpg"
-                            value={form.imageUrl}
-                            onChange={(e: ChangeEvent<HTMLInputElement>) => setForm({ ...form, imageUrl: e.target.value })} />
-                    </div>
+                    <ImageUpload
+                        label="Gambar Sampul (Opsional)"
+                        value={form.imageUrl ?? ''}
+                        onChange={(url) => setForm({ ...form, imageUrl: url })}
+                    />
                 </div>
             </Modal>
         </div>

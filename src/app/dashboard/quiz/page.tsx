@@ -5,6 +5,7 @@ import { quizApi, parseCSV, exportToCSV } from '@/lib/api';
 import { useToast } from '@/lib/toast-context';
 import Modal from '@/components/Modal';
 import StatusBadge from '@/components/StatusBadge';
+import ImageUpload from '@/components/ImageUpload';
 import type { Quiz, QuizType, QuizResult, QuestionType, EssaySubmission } from '@/types';
 
 interface QuestionForm {
@@ -499,23 +500,12 @@ export default function QuizPage(): React.JSX.Element {
                                 </div>
 
                                 {/* Question Image */}
-                                <div className="form-group" style={{ marginBottom: 14 }}>
-                                    <label className="form-label">
-                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', marginRight: 4 }}>
-                                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
-                                            <polyline points="21 15 16 10 5 21"/>
-                                        </svg>
-                                        URL Gambar Soal <span style={{ fontWeight: 400, color: 'var(--color-text-muted)' }}>(opsional)</span>
-                                    </label>
-                                    <input className="form-input" placeholder="https://contoh.com/gambar.jpg"
+                                <div style={{ marginBottom: 14 }}>
+                                    <ImageUpload
+                                        label="Gambar Soal (opsional)"
                                         value={q.imageUrl}
-                                        onChange={(e: ChangeEvent<HTMLInputElement>) => updateQ(qIdx, { imageUrl: e.target.value })} />
-                                    {q.imageUrl && (
-                                        // eslint-disable-next-line @next/next/no-img-element
-                                        <img src={q.imageUrl} alt="preview" className="img-preview"
-                                            onError={(e) => (e.currentTarget.style.display = 'none')}
-                                            onLoad={(e) => (e.currentTarget.style.display = 'block')} />
-                                    )}
+                                        onChange={(url) => updateQ(qIdx, { imageUrl: url })}
+                                    />
                                 </div>
 
                                 {/* Options — only for PG and TF */}
@@ -542,16 +532,12 @@ export default function QuizPage(): React.JSX.Element {
                                                         onChange={(e: ChangeEvent<HTMLInputElement>) => updateOption(qIdx, oIdx, e.target.value)} />
                                                 )}
                                                 {q.type === 'MULTIPLE_CHOICE' && (
-                                                    <div style={{ minWidth: 180 }}>
-                                                        <input className="form-input" placeholder="URL gambar opsi (opsional)"
+                                                    <div style={{ minWidth: 120 }}>
+                                                        <ImageUpload
+                                                            compact
                                                             value={q.optionImages[oIdx] || ''}
-                                                            onChange={(e: ChangeEvent<HTMLInputElement>) => updateOptionImage(qIdx, oIdx, e.target.value)}
-                                                            style={{ fontSize: '0.75rem', padding: '6px 10px' }} />
-                                                        {q.optionImages[oIdx] && (
-                                                            // eslint-disable-next-line @next/next/no-img-element
-                                                            <img src={q.optionImages[oIdx]} alt="" style={{ width: '100%', maxHeight: 60, objectFit: 'cover', borderRadius: 6, marginTop: 4 }}
-                                                                onError={(e) => (e.currentTarget.style.display = 'none')} />
-                                                        )}
+                                                            onChange={(url) => updateOptionImage(qIdx, oIdx, url)}
+                                                        />
                                                     </div>
                                                 )}
                                             </div>
