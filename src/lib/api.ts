@@ -649,7 +649,22 @@ export const enrollmentApi = {
 // NOTE: Requires new backend endpoint POST /api/v1/upload
 // =============================================================
 
+interface UploadStatus {
+    recordId: string;
+    status: 'queued' | 'processing' | 'ready' | 'rejected' | 'failed';
+    url: string | null;
+    errorMessage: string | null;
+}
+
+const UPLOAD_POLL_INTERVAL_MS = 1500;
+const UPLOAD_POLL_TIMEOUT_MS = 90_000;
+
 export const uploadApi = {
+    /**
+     * Upload asinkron: backend balas 202 + recordId, lalu kita polling
+     * GET /upload/status/:id sampai `ready`. Signature dipertahankan
+     * (`{ url, fileId }`) agar pemanggil lama tidak perlu berubah.
+     */
     uploadFile: async (file: File, options?: { folderId?: string }): Promise<{ url: string; fileId: string }> => {
         // FIX F3-4 — cookie httpOnly dikirim otomatis lewat `credentials: 'include'`.
         const formData = new FormData();
@@ -665,8 +680,34 @@ export const uploadApi = {
             const raw = await response.json().catch(() => ({}));
             throw new Error(raw?.message || `Upload gagal: ${response.status}`);
         }
-        const raw = await response.json();
-        return (raw?.data ?? raw) as { url: string; fileId: string };
+        const accepted = await response.json();
+        const { recordId } = (accepted?.data ?? accepted) as { recordId: string };
+        if (!recordId) throw new Error('Respons upload tidak valid (recordId kosong)');
+
+        const deadline = Date.now() + UPLOAD_POLL_TIMEOUT_MS;
+        while (Date.now() < deadline) {
+            const statusRes = await fetch(`${API_BASE}/upload/status/${recordId}`, {
+                credentials: 'include',
+                headers: { 'X-Platform': 'web' },
+            });
+            if (!statusRes.ok) {
+                const raw = await statusRes.json().catch(() => ({}));
+                throw new Error(raw?.message || `Gagal cek status upload: ${statusRes.status}`);
+            }
+            const body = await statusRes.json();
+            const s = (body?.data ?? body) as UploadStatus;
+
+            if (s.status === 'ready' && s.url) {
+                // url = /api/v1/upload/<fileId> → ekstrak fileId.
+                const fileId = s.url.split('/').pop() ?? '';
+                return { url: s.url, fileId };
+            }
+            if (s.status === 'rejected' || s.status === 'failed') {
+                throw new Error(s.errorMessage || `Upload ${s.status}`);
+            }
+            await new Promise((r) => setTimeout(r, UPLOAD_POLL_INTERVAL_MS));
+        }
+        throw new Error('Upload timeout — file masih diproses, coba lagi nanti.');
     },
 };
 

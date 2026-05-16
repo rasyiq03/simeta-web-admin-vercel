@@ -176,7 +176,7 @@ export default function AttendancePage(): React.JSX.Element {
             r.checkInTime ? new Date(r.checkInTime).toLocaleString('id-ID') : '-',
             STATUS_STYLE[r.status]?.label || r.status,
         ]);
-        exportToCSV(`absensi-${detailData.title.replace(/\s+/g, '-')}.csv', headers, rows);
+        exportToCSV(`absensi-${detailData.title.replace(/\s+/g, '-')}.csv`, headers, rows);
     };
 
     return (

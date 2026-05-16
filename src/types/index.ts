@@ -10,6 +10,9 @@ export interface JWTPayload {
     sub: string;
     email: string;
     role: UserRole;
+    name?: string;
+    mahasiswaType?: EnrollmentMahasiswaType | null;
+    mustChangePassword?: boolean;
     iat?: number;
     exp?: number;
 }
