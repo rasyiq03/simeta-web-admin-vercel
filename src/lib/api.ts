@@ -80,6 +80,49 @@ import type {
 
 const API_BASE: string = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1').replace(/\/$/, '');
 
+// Diagnostik deploy: kalau bundle produksi ter-build tanpa NEXT_PUBLIC_API_URL,
+// API_BASE jatuh ke localhost dan SEMUA request gagal dari origin terdeploy
+// (gejala: spinner berputar terus, UI tak muncul). Teriak keras di console
+// alih-alih diam.
+if (
+    typeof window !== 'undefined' &&
+    window.location.protocol === 'https:' &&
+    API_BASE.includes('localhost')
+) {
+    // eslint-disable-next-line no-console
+    console.error(
+        '[SIMETA] NEXT_PUBLIC_API_URL tidak di-set saat build — API_BASE = ' +
+            `"${API_BASE}". Set env ini di dashboard deploy lalu re-build.`,
+    );
+}
+
+// Timeout default request. Tanpa ini, fetch menggantung tak terbatas saat
+// backend lambat/cold-start/unreachable → auth bootstrap tak pernah selesai
+// → spinner abadi. 12 dtk: cukup untuk cold start wajar, cukup cepat untuk
+// gagal ke layar login alih-alih menggantung selamanya.
+const REQUEST_TIMEOUT_MS = 12_000;
+
+async function fetchWithTimeout(
+    input: string,
+    init: RequestInit = {},
+    timeoutMs: number = REQUEST_TIMEOUT_MS,
+): Promise<Response> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+        return await fetch(input, { ...init, signal: controller.signal });
+    } catch (err) {
+        if (err instanceof DOMException && err.name === 'AbortError') {
+            throw new Error(
+                'Server tidak merespons (timeout). Periksa koneksi atau coba lagi.',
+            );
+        }
+        throw err;
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
 /**
  * FIX F3-4 — `getToken` dipertahankan untuk kompatibilitas API publik
  * (mis. exportExcel di bawah), tapi selalu mengembalikan null karena JWT
@@ -114,7 +157,7 @@ async function apiFetch<T = unknown>(endpoint: string, options: RequestInit = {}
     // FIX F3-4 — `credentials: 'include'` membuat browser otomatis mengirim
     // cookie `simeta_token` ke backend (cross-origin sekalipun, asalkan CORS
     // backend men-set Access-Control-Allow-Credentials: true — sudah).
-    const response = await fetch(`${API_BASE}${endpoint}`, {
+    const response = await fetchWithTimeout(`${API_BASE}${endpoint}`, {
         ...options,
         credentials: 'include',
         headers,
@@ -670,12 +713,13 @@ export const uploadApi = {
         const formData = new FormData();
         formData.append('file', file);
         if (options?.folderId) formData.append('folderId', options.folderId);
-        const response = await fetch(`${API_BASE}/upload`, {
+        // Upload boleh lebih lama dari request biasa (file besar) → 30 dtk.
+        const response = await fetchWithTimeout(`${API_BASE}/upload`, {
             method: 'POST',
             credentials: 'include',
             headers: { 'X-Platform': 'web' },
             body: formData,
-        });
+        }, 30_000);
         if (!response.ok) {
             const raw = await response.json().catch(() => ({}));
             throw new Error(raw?.message || `Upload gagal: ${response.status}`);
@@ -686,7 +730,7 @@ export const uploadApi = {
 
         const deadline = Date.now() + UPLOAD_POLL_TIMEOUT_MS;
         while (Date.now() < deadline) {
-            const statusRes = await fetch(`${API_BASE}/upload/status/${recordId}`, {
+            const statusRes = await fetchWithTimeout(`${API_BASE}/upload/status/${recordId}`, {
                 credentials: 'include',
                 headers: { 'X-Platform': 'web' },
             });
