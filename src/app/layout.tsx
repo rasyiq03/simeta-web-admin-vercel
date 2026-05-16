@@ -11,6 +11,14 @@ import './globals.css';
 
 const inter = Inter({ subsets: ['latin'], display: 'swap' });
 
+// WAJIB untuk CSP nonce. middleware.ts membuat nonce acak per-request lalu
+// menaruhnya di header CSP. Next.js HANYA menyuntik nonce itu ke <script>
+// saat halaman dirender DINAMIS per-request. Tanpa ini, App Router
+// mem-prerender halaman secara STATIS saat build (tanpa nonce) → seluruh
+// script ter-blokir CSP di produksi → React tak pernah mount, spinner abadi.
+// Aplikasi ini CMS ber-auth (semua client-rendered), jadi dynamic = tepat.
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
     title: 'SIMETA CMS',
     description: 'Content Management System for SIMETA — Sistem Informasi Mentoring dan Tahfidz',
