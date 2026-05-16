@@ -3,8 +3,12 @@
    Color Palette: #DE902A (Amber/Gold) + #121D59 (Deep Navy)
    ============================================================= */
 
-/* ─── Google Fonts ─── */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+/* ─── Font ───
+   Inter di-load & di-self-host oleh `next/font/google` di src/app/layout.tsx
+   (lihat `inter.className` pada <html>). JANGAN @import dari
+   fonts.googleapis.com di sini: itu request eksternal yang render-blocking
+   DAN diblokir CSP (style-src tidak mengizinkan fonts.googleapis.com),
+   sehingga memperlambat first paint tanpa manfaat. */
 
 /* ─── CSS Custom Properties ─── */
 :root {
