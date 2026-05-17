@@ -61,6 +61,7 @@ export default function UsersPage(): React.JSX.Element {
     const [refKategori, setRefKategori] = useState<Kategori[]>([]);
     const [refLoading, setRefLoading] = useState(false);
     const [refError, setRefError]     = useState<string | null>(null);
+    const refFetchedRef               = useRef(false);
     const [importRows, setImportRows]   = useState<BulkCreateUserItem[]>([]);
     const [importErrors, setImportErrors] = useState<string[]>([]);
     const [importLoading, setImportLoading] = useState(false);
@@ -85,9 +86,16 @@ export default function UsersPage(): React.JSX.Element {
     // Reset page when filter changes
     useEffect(() => { setPage(1); }, [search, roleFilter, perPage]);
 
-    // FIX #3 — muat data referensi sekali saat modal Tambah Akun dibuka.
+    // FIX #3 — muat data referensi TEPAT SEKALI tiap modal dibuka.
+    // Pakai ref sebagai guard: memakai `refJurusan.length` sebagai guard
+    // dulu menyebabkan refetch tak hingga bila list kosong/lambat
+    // (refLoading toggle → deps berubah → fetch lagi). Ref tidak ikut
+    // memicu render sehingga aman dari loop; di-reset saat modal ditutup
+    // agar pembukaan berikutnya bisa mencoba lagi (mis. setelah error).
     useEffect(() => {
-        if (!addModal || refJurusan.length > 0 || refLoading) return;
+        if (!addModal) { refFetchedRef.current = false; return; }
+        if (refFetchedRef.current) return;
+        refFetchedRef.current = true;
         let cancelled = false;
         (async () => {
             setRefLoading(true); setRefError(null);
@@ -101,13 +109,16 @@ export default function UsersPage(): React.JSX.Element {
                 if (cancelled) return;
                 setRefJurusan(j); setRefProdi(p); setRefKelas(k); setRefKategori(kt);
             } catch (err) {
-                if (!cancelled) setRefError((err as Error).message);
+                if (!cancelled) {
+                    setRefError((err as Error).message);
+                    refFetchedRef.current = false; // izinkan retry saat dibuka lagi
+                }
             } finally {
                 if (!cancelled) setRefLoading(false);
             }
         })();
         return () => { cancelled = true; };
-    }, [addModal, refJurusan.length, refLoading]);
+    }, [addModal]);
 
     useEffect(() => {
         const handler = (e: MouseEvent) => {
@@ -693,7 +704,7 @@ export default function UsersPage(): React.JSX.Element {
                                     <label className="form-label">Jurusan <span className="required">*</span></label>
                                     <select className="form-select" value={addForm.jurusanId} disabled={refLoading || refJurusan.length === 0}
                                         onChange={(e: ChangeEvent<HTMLSelectElement>) => setAddForm({ ...addForm, jurusanId: e.target.value, prodiId: '', kelasId: '' })}>
-                                        <option value="">{refJurusan.length === 0 ? '-- Belum ada jurusan --' : '-- Pilih Jurusan --'}</option>
+                                        <option value="">{refLoading ? '-- Memuat… --' : (refJurusan.length === 0 ? '-- Belum ada jurusan --' : '-- Pilih Jurusan --')}</option>
                                         {refJurusan.map((j) => <option key={j.id} value={j.id}>{j.name}</option>)}
                                     </select>
                                 </div>
