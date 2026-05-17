@@ -7,9 +7,11 @@ import { useSemester } from '@/lib/semester-context';
 import Modal from '@/components/Modal';
 import type { User, UserRole } from '@/types';
 
-const PARTICIPANT_ROLES: UserRole[] = ['MENTEE', 'MENTOR', 'PESERTA'];
+// Backend kini memakai role MAHASISWA (mentor/mentee per-semester via Enrollment).
+const PARTICIPANT_ROLES: UserRole[] = ['MAHASISWA', 'MENTEE', 'MENTOR', 'PESERTA'];
 
 const ROLE_BADGE: Record<string, { bg: string; color: string }> = {
+    MAHASISWA: { bg: 'rgba(124,58,237,0.1)',  color: '#7C3AED' },
     MENTOR:  { bg: 'rgba(22,163,74,0.1)',   color: '#16A34A' },
     MENTEE:  { bg: 'rgba(124,58,237,0.1)',  color: '#7C3AED' },
     PESERTA: { bg: 'rgba(14,165,233,0.1)',  color: '#0284C7' },

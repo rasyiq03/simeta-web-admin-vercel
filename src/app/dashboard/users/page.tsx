@@ -11,33 +11,39 @@ import type { User, UserRole, Gender, BulkCreateUserItem, Jurusan, Prodi, Kelas,
 interface RoleModalState { open: boolean; user: User | null; selectedRole: UserRole; }
 interface AddUserForm {
     name: string; email: string; password: string; role: UserRole;
-    nim: string; jurusanId: string; prodiId: string; kelasId: string; kategoriId: string; gender: Gender | '';
+    nim: string; gender: Gender | '';
+    jurusanId: string; prodiId: string; kelasId: string; kategoriId: string;
 }
 interface ExportDropdownState { open: boolean; loading: boolean; }
 
+// Role enum yang VALID di backend (sumber: pesan validasi backend).
+// MAHASISWA = peserta (mentor/mentee dibedakan per-semester via Enrollment).
 const ADMIN_ROLES: UserRole[]       = ['ADMIN', 'PANITIA', 'DOSEN'];
-const PARTICIPANT_ROLES: UserRole[] = ['MENTOR', 'MENTEE', 'PESERTA'];
-const ALL_ROLES: UserRole[]         = [...ADMIN_ROLES, ...PARTICIPANT_ROLES];
+const PARTICIPANT_ROLES: UserRole[] = ['MAHASISWA'];
+const ALL_ROLES: UserRole[]         = ['ADMIN', 'PANITIA', 'DOSEN', 'MAHASISWA'];
 
 const ROLE_BADGE_STYLE: Record<string, { bg: string; color: string }> = {
-    ADMIN:   { bg: 'rgba(222,144,42,0.1)',  color: '#B87420' },
-    PANITIA: { bg: 'rgba(234,88,12,0.1)',   color: '#EA580C' },
-    DOSEN:   { bg: 'rgba(37,99,235,0.1)',   color: '#2563EB' },
-    MENTOR:  { bg: 'rgba(22,163,74,0.1)',   color: '#16A34A' },
-    MENTEE:  { bg: 'rgba(124,58,237,0.1)',  color: '#7C3AED' },
-    PESERTA: { bg: 'rgba(14,165,233,0.1)',  color: '#0284C7' },
+    ADMIN:     { bg: 'rgba(222,144,42,0.1)',  color: '#B87420' },
+    PANITIA:   { bg: 'rgba(234,88,12,0.1)',   color: '#EA580C' },
+    DOSEN:     { bg: 'rgba(37,99,235,0.1)',   color: '#2563EB' },
+    MAHASISWA: { bg: 'rgba(124,58,237,0.1)',  color: '#7C3AED' },
+    // Legacy — hanya untuk menampilkan data lama bila masih ada.
+    MENTOR:    { bg: 'rgba(22,163,74,0.1)',   color: '#16A34A' },
+    MENTEE:    { bg: 'rgba(124,58,237,0.1)',  color: '#7C3AED' },
+    PESERTA:   { bg: 'rgba(14,165,233,0.1)',  color: '#0284C7' },
 };
 
 const IMPORT_TEMPLATE = [
     ['Nama', 'Email', 'Password', 'Role', 'NIM', 'Kelas', 'Prodi', 'Jurusan', 'Gender'],
-    ['Ahmad Fauzi', 'ahmad@example.com', 'Password123!', 'MENTEE', '123456', 'A', 'Teknik Informatika', 'Ilmu Komputer', 'LAKI_LAKI'],
+    ['Ahmad Fauzi', 'ahmad@example.com', 'Password123!', 'MAHASISWA', '123456', 'A', 'Teknik Informatika', 'Ilmu Komputer', 'LAKI_LAKI'],
 ];
 
 const NEEDS_EXTENDED = (role: UserRole) => PARTICIPANT_ROLES.includes(role);
 
 const EMPTY_FORM: AddUserForm = {
-    name: '', email: '', password: '', role: 'MENTEE',
-    nim: '', jurusanId: '', prodiId: '', kelasId: '', kategoriId: '', gender: '',
+    name: '', email: '', password: '', role: 'MAHASISWA',
+    nim: '', gender: '',
+    jurusanId: '', prodiId: '', kelasId: '', kategoriId: '',
 };
 
 const PER_PAGE_OPTIONS = [10, 20, 50, 100];
@@ -49,7 +55,7 @@ export default function UsersPage(): React.JSX.Element {
     const [roleFilter, setRoleFilter] = useState('');
     const [page, setPage]           = useState(1);
     const [perPage, setPerPage]     = useState(20);
-    const [roleModal, setRoleModal] = useState<RoleModalState>({ open: false, user: null, selectedRole: 'MENTEE' });
+    const [roleModal, setRoleModal] = useState<RoleModalState>({ open: false, user: null, selectedRole: 'MAHASISWA' });
     const [addModal, setAddModal]   = useState(false);
     const [importModal, setImportModal] = useState(false);
     const [addForm, setAddForm]     = useState<AddUserForm>(EMPTY_FORM);
@@ -151,7 +157,7 @@ export default function UsersPage(): React.JSX.Element {
         try {
             await usersApi.assignRole(roleModal.user.id, roleModal.selectedRole);
             showToast('Role berhasil diperbarui', 'success');
-            setRoleModal({ open: false, user: null, selectedRole: 'MENTEE' });
+            setRoleModal({ open: false, user: null, selectedRole: 'MAHASISWA' });
             fetchUsers();
         } catch (err) { showToast((err as Error).message, 'error'); }
     };
@@ -211,7 +217,7 @@ export default function UsersPage(): React.JSX.Element {
             showToast('Nama, email, dan password wajib diisi', 'error'); return;
         }
         if (NEEDS_EXTENDED(addForm.role)) {
-            if (!addForm.nim || !addForm.kelasId || !addForm.prodiId || !addForm.jurusanId || !addForm.gender) {
+            if (!addForm.nim || !addForm.jurusanId || !addForm.prodiId || !addForm.kelasId || !addForm.gender) {
                 showToast('NIM, jurusan, prodi, kelas, dan gender wajib untuk peserta', 'error'); return;
             }
         }
@@ -221,11 +227,11 @@ export default function UsersPage(): React.JSX.Element {
                 name: addForm.name, email: addForm.email, password: addForm.password, role: addForm.role,
                 ...(NEEDS_EXTENDED(addForm.role) && {
                     nim: addForm.nim,
+                    gender: addForm.gender as Gender,
                     jurusanId: addForm.jurusanId,
                     prodiId: addForm.prodiId,
                     kelasId: addForm.kelasId,
                     ...(addForm.kategoriId && { kategoriId: addForm.kategoriId }),
-                    gender: addForm.gender as Gender,
                 }),
             });
             showToast(`Akun ${addForm.name} berhasil dibuat`, 'success');
@@ -267,7 +273,7 @@ export default function UsersPage(): React.JSX.Element {
             const errors: string[] = [];
             const items: BulkCreateUserItem[] = rows.slice(1).filter((r) => r.some((c) => c)).map((r, i) => {
                 const rawRole = (r[roleIdx] || '').toUpperCase() as UserRole;
-                const role: UserRole = ALL_ROLES.includes(rawRole) ? rawRole : 'MENTEE';
+                const role: UserRole = ALL_ROLES.includes(rawRole) ? rawRole : 'MAHASISWA';
                 if (!r[nameIdx] || !r[emailIdx] || !r[passIdx]) errors.push(`Baris ${i + 2}: data tidak lengkap`);
                 return {
                     name: r[nameIdx] || '', email: r[emailIdx] || '',
@@ -295,7 +301,7 @@ export default function UsersPage(): React.JSX.Element {
             try {
                 await authApi.registerAs({
                     name: item.name, email: item.email, password: item.password,
-                    role: item.role ?? 'MENTEE',
+                    role: item.role ?? 'MAHASISWA',
                     nim: item.nim, kelasId: item.kelas, prodiId: item.prodi,
                     jurusanId: item.jurusan, gender: item.gender,
                 });
@@ -365,7 +371,7 @@ export default function UsersPage(): React.JSX.Element {
 
     const participantCount = users.filter((u) => PARTICIPANT_ROLES.includes(u.role)).length;
     const needsExtended    = NEEDS_EXTENDED(addForm.role);
-    // FIX #3 — opsi dropdown bertingkat
+    // FIX #3 — opsi dropdown bertingkat (wajib dari Data Referensi).
     const prodiOptions = refProdi.filter((p) => p.jurusanId === addForm.jurusanId);
     const kelasOptions = refKelas.filter((k) => k.prodiId === addForm.prodiId);
 
@@ -507,7 +513,7 @@ export default function UsersPage(): React.JSX.Element {
                                                         ) : <span className="text-muted text-xs">—</span>}
                                                     </td>
                                                     <td>
-                                                        {(usr.role === 'MENTOR' || usr.role === 'MENTEE' || usr.role === 'PESERTA') ? (
+                                                        {PARTICIPANT_ROLES.includes(usr.role) ? (
                                                             usr.deviceId
                                                                 ? <span className="badge badge-success">Terikat</span>
                                                                 : <span className="badge badge-warning">Bebas</span>
@@ -523,7 +529,7 @@ export default function UsersPage(): React.JSX.Element {
                                                                     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
                                                                 </svg>
                                                             </button>
-                                                            {(usr.role === 'MENTOR' || usr.role === 'MENTEE' || usr.role === 'PESERTA') && (
+                                                            {PARTICIPANT_ROLES.includes(usr.role) && (
                                                                 <button className="btn btn-ghost btn-icon-sm" onClick={() => handleResetDevice(usr)} title="Reset Device (lepas ikatan perangkat agar bisa login di HP baru)" style={{ color: 'var(--color-warning)' }}>
                                                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                                                         <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
@@ -679,7 +685,7 @@ export default function UsersPage(): React.JSX.Element {
                             )}
                             {refError && (
                                 <div className="warning-banner">
-                                    <span>Gagal memuat data referensi: {refError}. Tambahkan jurusan/prodi/kelas di menu Data Referensi terlebih dahulu.</span>
+                                    <span>Gagal memuat data referensi: {refError}. Pastikan jurusan/prodi/kelas sudah ada di menu Data Referensi.</span>
                                 </div>
                             )}
 
@@ -728,9 +734,9 @@ export default function UsersPage(): React.JSX.Element {
                                 </div>
                                 <div className="form-group">
                                     <label className="form-label">Kategori <span className="text-muted">(opsional)</span></label>
-                                    <select className="form-select" value={addForm.kategoriId}
+                                    <select className="form-select" value={addForm.kategoriId} disabled={refKategori.length === 0}
                                         onChange={(e: ChangeEvent<HTMLSelectElement>) => setAddForm({ ...addForm, kategoriId: e.target.value })}>
-                                        <option value="">-- Tidak ada --</option>
+                                        <option value="">{refKategori.length === 0 ? '-- Tidak ada kategori --' : '-- Tidak ada --'}</option>
                                         {refKategori.map((kt) => <option key={kt.id} value={kt.id}>{kt.name}</option>)}
                                     </select>
                                 </div>
@@ -815,11 +821,11 @@ export default function UsersPage(): React.JSX.Element {
             </Modal>
 
             {/* ── Modal: Ubah Role ── */}
-            <Modal isOpen={roleModal.open} onClose={() => setRoleModal({ open: false, user: null, selectedRole: 'MENTEE' })}
+            <Modal isOpen={roleModal.open} onClose={() => setRoleModal({ open: false, user: null, selectedRole: 'MAHASISWA' })}
                 title="Ubah Role Pengguna" size="sm"
                 footer={
                     <>
-                        <button className="btn btn-outline btn-sm" onClick={() => setRoleModal({ open: false, user: null, selectedRole: 'MENTEE' })}>Batal</button>
+                        <button className="btn btn-outline btn-sm" onClick={() => setRoleModal({ open: false, user: null, selectedRole: 'MAHASISWA' })}>Batal</button>
                         <button className="btn btn-primary btn-sm" onClick={handleAssignRole}>Simpan</button>
                     </>
                 }>

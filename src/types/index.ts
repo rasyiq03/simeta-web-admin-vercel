@@ -44,7 +44,11 @@ export interface RegisterAsRequest {
 
 // ─── User Types ─── //
 
-export type UserRole = 'ADMIN' | 'PANITIA' | 'DOSEN' | 'MENTOR' | 'MENTEE' | 'PESERTA';
+// Backend role enum: ADMIN | MAHASISWA | DOSEN | PANITIA.
+// MENTOR/MENTEE/PESERTA dipertahankan di union hanya untuk kompatibilitas
+// tampilan data lama; pembedaan mentor/mentee yang baru ada di
+// Enrollment.mahasiswaType (per-semester), bukan di role user.
+export type UserRole = 'ADMIN' | 'PANITIA' | 'DOSEN' | 'MAHASISWA' | 'MENTOR' | 'MENTEE' | 'PESERTA';
 
 export type Gender = 'LAKI_LAKI' | 'PEREMPUAN';
 
