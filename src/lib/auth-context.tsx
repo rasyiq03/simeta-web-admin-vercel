@@ -81,6 +81,44 @@ export function AuthProvider({ children }: AuthProviderProps) {
         void refreshSession().finally(() => setLoading(false));
     }, [refreshSession]);
 
+    // FIX #6 — Saat apiFetch mendeteksi sesi mati (401 + refresh gagal), ia
+    // broadcast `simeta:session-expired`. Di sini kita: simpan halaman tujuan
+    // supaya bisa balik setelah login, tandai alasan agar /login bisa memberi
+    // pesan jelas, lalu kosongkan user → AuthGuard otomatis redirect ke /login.
+    useEffect(() => {
+        const onExpired = (): void => {
+            if (typeof window !== 'undefined') {
+                const path = window.location.pathname + window.location.search;
+                if (path.startsWith('/dashboard')) {
+                    sessionStorage.setItem('simeta_redirect', path);
+                }
+                sessionStorage.setItem('simeta_session_expired', '1');
+            }
+            setUser(null);
+        };
+        window.addEventListener('simeta:session-expired', onExpired);
+        return () => window.removeEventListener('simeta:session-expired', onExpired);
+    }, []);
+
+    // FIX #6 — Refresh token diam-diam secara berkala + saat tab kembali
+    // aktif, sehingga sesi tidak putus mendadak di tengah pemakaian
+    // ("token cepat expired"). Gagal refresh tidak meng-logout langsung;
+    // biar request berikutnya yang memutuskan via alur 401 di apiFetch.
+    useEffect(() => {
+        if (!user) return;
+        const SILENT_REFRESH_MS = 9 * 60 * 1000; // < umur access token tipikal
+        const tick = (): void => { void authApi.refresh().catch(() => {}); };
+        const interval = setInterval(tick, SILENT_REFRESH_MS);
+        const onVisible = (): void => {
+            if (document.visibilityState === 'visible') tick();
+        };
+        document.addEventListener('visibilitychange', onVisible);
+        return () => {
+            clearInterval(interval);
+            document.removeEventListener('visibilitychange', onVisible);
+        };
+    }, [user]);
+
     const logout = useCallback(async (): Promise<void> => {
         try {
             await authApi.logout();

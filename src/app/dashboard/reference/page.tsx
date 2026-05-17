@@ -433,6 +433,12 @@ export default function ReferencePage(): React.JSX.Element {
             {/* ── Kategori tab ── */}
             {!loading && !tabError && tab === 'kategori' && (
                 <div className="card">
+                    <div className="info-banner" style={{ margin: 16 }}>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}>
+                            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                        </svg>
+                        <span>Kategori di sini menjadi <strong>sumber tunggal</strong> untuk pengelompokan kelompok mentoring (mis. Muallam 1/2/3). Yang Anda buat di sini akan muncul sebagai pilihan di halaman <strong>Mentoring</strong>.</span>
+                    </div>
                     <div className="card-body" style={{ padding: 0 }}>
                         {kategoriList.length === 0 ? (
                             <div className="empty-state"><p>Belum ada kategori</p></div>

@@ -147,7 +147,64 @@ export function getDeviceId(): string {
     return deviceId;
 }
 
-async function apiFetch<T = unknown>(endpoint: string, options: RequestInit = {}): Promise<T> {
+/**
+ * FIX #6 — Penanganan sesi kedaluwarsa terpusat.
+ *
+ * Gejala lama: token (cookie httpOnly) cepat expired, request balas 401,
+ * tapi UI tidak bereaksi → user terjebak di halaman kosong tanpa tahu harus
+ * login ulang (melanggar heuristic "visibility of system status" & "error
+ * recovery"). Sekarang:
+ *
+ *   1. Saat sebuah request balas 401, kita coba SEKALI refresh token diam-diam
+ *      lewat POST /auth/refresh (cookie refresh httpOnly dikirim otomatis).
+ *   2. Kalau refresh sukses → request asli diulang transparan (user tidak
+ *      merasakan apa-apa, sesi terasa lebih panjang).
+ *   3. Kalau refresh gagal → broadcast event `simeta:session-expired`.
+ *      AuthProvider menangkapnya, membersihkan state, dan mengarahkan ke
+ *      /login dengan pesan jelas + menyimpan halaman tujuan agar bisa balik.
+ *
+ * Endpoint auth (login/refresh/logout) dikecualikan dari retry agar tidak
+ * terjadi loop tak hingga.
+ */
+const AUTH_BYPASS_ENDPOINTS = ['/auth/login', '/auth/refresh', '/auth/logout'];
+
+let refreshInFlight: Promise<boolean> | null = null;
+
+async function attemptRefresh(): Promise<boolean> {
+    // De-dupe: bila banyak request 401 berbarengan, hanya satu panggilan
+    // /auth/refresh yang benar-benar dikirim; sisanya menunggu hasilnya.
+    if (!refreshInFlight) {
+        refreshInFlight = (async () => {
+            try {
+                const res = await fetchWithTimeout(`${API_BASE}/auth/refresh`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json', 'X-Platform': 'web' },
+                    body: JSON.stringify({}),
+                });
+                return res.ok;
+            } catch {
+                return false;
+            } finally {
+                // Reset di tick berikutnya supaya gelombang 401 yang sama
+                // berbagi satu hasil, tapi refresh baru tetap mungkin nanti.
+                setTimeout(() => { refreshInFlight = null; }, 0);
+            }
+        })();
+    }
+    return refreshInFlight;
+}
+
+function broadcastSessionExpired(): void {
+    if (typeof window === 'undefined') return;
+    window.dispatchEvent(new CustomEvent('simeta:session-expired'));
+}
+
+async function apiFetch<T = unknown>(
+    endpoint: string,
+    options: RequestInit = {},
+    _retried = false,
+): Promise<T> {
     const headers: Record<string, string> = {
         'Content-Type': 'application/json',
         'X-Platform': 'web',
@@ -162,6 +219,21 @@ async function apiFetch<T = unknown>(endpoint: string, options: RequestInit = {}
         credentials: 'include',
         headers,
     });
+
+    // ── FIX #6: 401 → coba refresh sekali, lalu ulang request ──
+    const isAuthBypass = AUTH_BYPASS_ENDPOINTS.some((p) => endpoint.startsWith(p));
+    if (response.status === 401 && !isAuthBypass && !_retried) {
+        const refreshed = await attemptRefresh();
+        if (refreshed) {
+            return apiFetch<T>(endpoint, options, true);
+        }
+        broadcastSessionExpired();
+        throw new Error('Sesi Anda telah berakhir. Silakan login kembali.');
+    }
+    if (response.status === 401 && !isAuthBypass && _retried) {
+        broadcastSessionExpired();
+        throw new Error('Sesi Anda telah berakhir. Silakan login kembali.');
+    }
 
     const contentType = response.headers.get('content-type');
     let raw: { data?: T; message?: string | string[] } | null = null;
@@ -205,6 +277,19 @@ export const authApi = {
     // FIX S2 — sebelumnya .then(normNama<User>). Backend sekarang langsung
     // mengembalikan `name` untuk jurusan/prodi/kelas/kategori.
     getMe: (): Promise<User> => apiFetch<User>(`/auth/me`),
+
+    // FIX #6 — refresh token diam-diam (dipakai juga otomatis oleh apiFetch
+    // saat 401). Cookie refresh httpOnly dikirim via credentials: 'include'.
+    refresh: (): Promise<MessageResponse> =>
+        apiFetch<MessageResponse>(`/auth/refresh`, { method: 'POST', body: JSON.stringify({}) }),
+
+    // FIX #1 — ganti password sendiri. Backend memutus sesi lama opsional;
+    // FE tetap memaksa user login ulang untuk konsistensi keamanan.
+    changePassword: (body: { oldPassword: string; newPassword: string }): Promise<MessageResponse> =>
+        apiFetch<MessageResponse>(`/auth/change-password`, {
+            method: 'POST',
+            body: JSON.stringify(body),
+        }),
 };
 
 // =============================================================
@@ -216,13 +301,22 @@ export const usersApi = {
 
     getById: (id: string): Promise<User> => apiFetch<User>(`/users/${id}`),
 
-    getParticipants: (): Promise<User[]> => apiFetch<User[]>(`/users/participants`),
+    getParticipants: (semesterId?: string): Promise<User[]> =>
+        apiFetch<User[]>(`/users/participants${semesterId ? `?semesterId=${semesterId}` : ''}`),
 
     assignRole: (id: string, role: UserRole): Promise<MessageResponse> =>
         apiFetch<MessageResponse>(`/users/${id}/role`, { method: 'PATCH', body: JSON.stringify({ role }) }),
 
     resetDevice: (id: string): Promise<MessageResponse> =>
         apiFetch<MessageResponse>(`/users/${id}/reset-device`, { method: 'PATCH' }),
+
+    // FIX #2 — kirim ulang informasi akun (email + password sementara)
+    // ke email user. Backend yang generate/sertakan kredensial; FE hanya memicu.
+    sendAccountInfo: (id: string): Promise<MessageResponse> =>
+        apiFetch<MessageResponse>(`/users/${id}/send-account-info`, {
+            method: 'POST',
+            body: JSON.stringify({}),
+        }),
 
     delete: (id: string): Promise<MessageResponse> =>
         apiFetch<MessageResponse>(`/users/${id}`, { method: 'DELETE' }),
@@ -312,7 +406,10 @@ export const attendanceApi = {
     checkIn: (body: { sessionId: string; latitude: number; longitude: number }): Promise<AttendanceRecord> =>
         apiFetch<AttendanceRecord>(`/attendance/check-in`, { method: 'POST', body: JSON.stringify(body) }),
 
-    getAll: (): Promise<AttendanceSession[]> => apiFetch<AttendanceSession[]>(`/attendance`),
+    // FIX #4 — semesterId opsional agar bisa melihat absensi semester lampau.
+    // Backend yang belum mendukung query ini akan mengabaikannya (graceful).
+    getAll: (semesterId?: string): Promise<AttendanceSession[]> =>
+        apiFetch<AttendanceSession[]>(`/attendance${semesterId ? `?semesterId=${semesterId}` : ''}`),
 
     getSessionDetail: (id: string): Promise<AttendanceSessionDetail> =>
         apiFetch<AttendanceSessionDetail>(`/attendance/${id}`),
@@ -339,8 +436,17 @@ export const mentoringApi = {
     createGroup: (body: CreateMentoringGroupRequest): Promise<MentoringGroup> =>
         apiFetch<MentoringGroup>(`/mentoring/groups`, { method: 'POST', body: JSON.stringify(body) }),
 
-    getGroups: (category?: MentoringCategory): Promise<MentoringGroup[]> =>
-        apiFetch<MentoringGroup[]>(`/mentoring/groups${category ? `?category=${category}` : ''}`),
+    // FIX #5 — filter kelompok berdasarkan kategori dari Data Referensi
+    // (kategoriId), bukan enum hardcoded. `category` tetap didukung untuk
+    // kompatibilitas data lama. FIX #4 — semesterId opsional.
+    getGroups: (opts?: { category?: MentoringCategory; kategoriId?: string; semesterId?: string }): Promise<MentoringGroup[]> => {
+        const qs = new URLSearchParams();
+        if (opts?.category) qs.set('category', opts.category);
+        if (opts?.kategoriId) qs.set('kategoriId', opts.kategoriId);
+        if (opts?.semesterId) qs.set('semesterId', opts.semesterId);
+        const s = qs.toString();
+        return apiFetch<MentoringGroup[]>(`/mentoring/groups${s ? `?${s}` : ''}`);
+    },
 
     getGroupById: (groupId: string): Promise<MentoringGroup> =>
         apiFetch<MentoringGroup>(`/mentoring/groups/${groupId}`),
@@ -581,7 +687,9 @@ export const iamApi = {
 export const dashboardApi = {
     getMyGrades: (): Promise<MyGrade> => apiFetch<MyGrade>(`/dashboard/my-grades`),
 
-    getAllGrades: (): Promise<StudentGrade[]> => apiFetch<StudentGrade[]>(`/dashboard/all-grades`),
+    // FIX #4 — semesterId opsional agar bisa melihat nilai semester lampau.
+    getAllGrades: (semesterId?: string): Promise<StudentGrade[]> =>
+        apiFetch<StudentGrade[]>(`/dashboard/all-grades${semesterId ? `?semesterId=${semesterId}` : ''}`),
 
     getMenteeGrades: (): Promise<StudentGrade[]> => apiFetch<StudentGrade[]>(`/dashboard/mentee-grades`),
 

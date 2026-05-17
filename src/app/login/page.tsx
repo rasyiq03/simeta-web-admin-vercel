@@ -24,8 +24,26 @@ export default function LoginPage(): React.JSX.Element {
     const { showToast } = useToast();
     const router = useRouter();
 
+    // FIX #6 — Jika tiba di sini karena sesi berakhir (bukan logout manual),
+    // beri tahu user dengan jelas alasannya (heuristic: visibility of system
+    // status & help users recognize/recover from errors).
     useEffect(() => {
-        if (user) router.replace('/dashboard');
+        if (typeof window === 'undefined') return;
+        if (sessionStorage.getItem('simeta_session_expired') === '1') {
+            sessionStorage.removeItem('simeta_session_expired');
+            showToast('Sesi Anda telah berakhir. Silakan login kembali.', 'info', 5000);
+        }
+    }, [showToast]);
+
+    useEffect(() => {
+        if (user) {
+            // FIX #6 — kembali ke halaman terakhir sebelum sesi putus.
+            const back = typeof window !== 'undefined'
+                ? sessionStorage.getItem('simeta_redirect')
+                : null;
+            if (back) sessionStorage.removeItem('simeta_redirect');
+            router.replace(back || '/dashboard');
+        }
     }, [user, router]);
 
     /** Handle form submit */

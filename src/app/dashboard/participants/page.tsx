@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, type ChangeEvent } from 'react';
 import { usersApi, exportToCSV } from '@/lib/api';
 import { useToast } from '@/lib/toast-context';
+import { useSemester } from '@/lib/semester-context';
 import Modal from '@/components/Modal';
 import type { User, UserRole } from '@/types';
 
@@ -29,18 +30,19 @@ export default function ParticipantsPage(): React.JSX.Element {
     const [detailUser, setDetailUser]         = useState<User | null>(null);
     const [expandedKelas, setExpandedKelas]   = useState<Set<string>>(new Set());
     const { showToast } = useToast();
+    const { selectedSemesterId } = useSemester();
 
     const fetchParticipants = useCallback(async () => {
         try {
             setLoading(true);
-            const data = await usersApi.getParticipants();
+            const data = await usersApi.getParticipants(selectedSemesterId || undefined);
             setParticipants(Array.isArray(data) ? data : []);
         } catch (err) {
             showToast((err as Error).message, 'error');
         } finally {
             setLoading(false);
         }
-    }, [showToast]);
+    }, [showToast, selectedSemesterId]);
 
     useEffect(() => { fetchParticipants(); }, [fetchParticipants]);
 

@@ -11,6 +11,7 @@
 import { useState, useEffect, useCallback, type ChangeEvent } from 'react';
 import { dashboardApi } from '@/lib/api';
 import { useToast } from '@/lib/toast-context';
+import { useSemester } from '@/lib/semester-context';
 import Modal from '@/components/Modal';
 import StatusBadge from '@/components/StatusBadge';
 import type { StudentGrade, LetterGrade } from '@/types';
@@ -54,6 +55,7 @@ export default function GradesPage(): React.JSX.Element {
     const [search, setSearch] = useState<string>('');
     const [detailModal, setDetailModal] = useState<DetailModalState>({ open: false, student: null });
     const { showToast } = useToast();
+    const { selectedSemesterId } = useSemester();
 
     const handleExportExcel = async () => {
         setExporting(true);
@@ -71,14 +73,14 @@ export default function GradesPage(): React.JSX.Element {
     const fetchGrades = useCallback(async (): Promise<void> => {
         try {
             setLoading(true);
-            const data = await dashboardApi.getAllGrades();
+            const data = await dashboardApi.getAllGrades(selectedSemesterId || undefined);
             setGrades(Array.isArray(data) ? data : []);
         } catch (err) {
             showToast((err as Error).message, 'error');
         } finally {
             setLoading(false);
         }
-    }, [showToast]);
+    }, [showToast, selectedSemesterId]);
 
     useEffect(() => { fetchGrades(); }, [fetchGrades]);
 

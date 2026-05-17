@@ -1,34 +1,45 @@
 'use client';
 
 import { useState, useEffect, useCallback, type ChangeEvent } from 'react';
-import { mentoringApi, usersApi, exportToCSV } from '@/lib/api';
+import { mentoringApi, usersApi, referenceApi, exportToCSV } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import { useToast } from '@/lib/toast-context';
+import { useSemester } from '@/lib/semester-context';
 import Modal from '@/components/Modal';
 import type {
     MentoringGroup,
-    MentoringCategory,
     MemorizationRecord,
     User,
+    Kategori,
     CreateMentoringGroupRequest,
     AutoGenerateGroupRequest,
 } from '@/types';
 
-const CATEGORIES: MentoringCategory[] = ['MUALLAM_1', 'MUALLAM_2', 'MUALLAM_3'];
-const CATEGORY_LABEL: Record<MentoringCategory, string> = {
-    MUALLAM_1: 'Muallam 1',
-    MUALLAM_2: 'Muallam 2',
-    MUALLAM_3: 'Muallam 3',
-};
+/**
+ * FIX #5 — Kategori kelompok mentoring TIDAK lagi hardcoded MUALLAM_1/2/3.
+ * Sekarang bersumber tunggal dari "Data Referensi → Kategori", sehingga apa
+ * yang admin definisikan di sana = pilihan yang muncul di sini (heuristic:
+ * consistency & match between system and real world). `category` enum lama
+ * tetap dibaca untuk menampilkan data kelompok yang sudah terlanjur ada.
+ */
+function groupKategoriLabel(g: MentoringGroup, list: Kategori[]): string {
+    if (g.kategori?.name) return g.kategori.name;
+    if (g.kategoriId) {
+        const k = list.find((x) => x.id === g.kategoriId);
+        if (k) return k.name;
+    }
+    if (g.category) return String(g.category).replace(/_/g, ' ');
+    return 'Tanpa kategori';
+}
 
 interface GroupForm {
     name: string;
     mentorId: string;
-    category: MentoringCategory;
+    kategoriId: string;
 }
 
 interface AutoGenForm {
-    category: MentoringCategory;
+    kategoriId: string;
     groupSize: number;
     namePrefix: string;
 }
@@ -40,19 +51,21 @@ interface ReportForm {
     memorizationRecords: MemorizationRecord[];
 }
 
-const DEFAULT_GROUP_FORM: GroupForm = { name: '', mentorId: '', category: 'MUALLAM_1' };
-const DEFAULT_AUTOGEN_FORM: AutoGenForm = { category: 'MUALLAM_1', groupSize: 5, namePrefix: '' };
+const DEFAULT_GROUP_FORM: GroupForm = { name: '', mentorId: '', kategoriId: '' };
+const DEFAULT_AUTOGEN_FORM: AutoGenForm = { kategoriId: '', groupSize: 5, namePrefix: '' };
 
 export default function MentoringPage(): React.JSX.Element {
     const { hasRole } = useAuth();
     const { showToast } = useToast();
+    const { selectedSemesterId } = useSemester();
 
     const isManager = hasRole('ADMIN', 'PANITIA', 'DOSEN');
     const isMentor  = hasRole('MENTOR');
 
     const [groups, setGroups]             = useState<MentoringGroup[]>([]);
     const [loading, setLoading]           = useState(true);
-    const [categoryFilter, setCategoryFilter] = useState<MentoringCategory | ''>('');
+    const [categoryFilter, setCategoryFilter] = useState<string>(''); // kategoriId
+    const [kategoriList, setKategoriList] = useState<Kategori[]>([]);
 
     const [mentors, setMentors]   = useState<User[]>([]);
     const [mentees, setMentees]   = useState<User[]>([]);
@@ -75,7 +88,10 @@ export default function MentoringPage(): React.JSX.Element {
         try {
             setLoading(true);
             const data = isManager
-                ? await mentoringApi.getGroups(categoryFilter || undefined)
+                ? await mentoringApi.getGroups({
+                    kategoriId: categoryFilter || undefined,
+                    semesterId: selectedSemesterId || undefined,
+                })
                 : await mentoringApi.getMyMentees();
             setGroups(Array.isArray(data) ? data : []);
         } catch (err) {
@@ -83,7 +99,7 @@ export default function MentoringPage(): React.JSX.Element {
         } finally {
             setLoading(false);
         }
-    }, [isManager, categoryFilter, showToast]);
+    }, [isManager, categoryFilter, selectedSemesterId, showToast]);
 
     const fetchUsers = useCallback(async () => {
         if (!isManager) return;
@@ -96,13 +112,27 @@ export default function MentoringPage(): React.JSX.Element {
         }
     }, [isManager]);
 
+    // FIX #5 — sumber tunggal kategori dari Data Referensi.
+    const fetchKategori = useCallback(async () => {
+        try {
+            setKategoriList(await referenceApi.getKategori());
+        } catch {
+            // Kategori belum tersedia → dropdown kosong, UI tetap jalan.
+        }
+    }, []);
+
     useEffect(() => { fetchGroups(); }, [fetchGroups]);
     useEffect(() => { fetchUsers(); }, [fetchUsers]);
+    useEffect(() => { fetchKategori(); }, [fetchKategori]);
 
     // ── Create Group ──
     const handleCreateGroup = async () => {
         if (!groupForm.name || !groupForm.mentorId) {
             showToast('Nama kelompok dan mentor wajib diisi', 'error');
+            return;
+        }
+        if (kategoriList.length > 0 && !groupForm.kategoriId) {
+            showToast('Kategori wajib dipilih', 'error');
             return;
         }
         try {
@@ -116,7 +146,11 @@ export default function MentoringPage(): React.JSX.Element {
 
     // ── Edit Group ──
     const openEditModal = (group: MentoringGroup) => {
-        setGroupForm({ name: group.name, mentorId: group.mentorId, category: group.category });
+        setGroupForm({
+            name: group.name,
+            mentorId: group.mentorId,
+            kategoriId: group.kategoriId ?? '',
+        });
         setEditModal({ open: true, group });
     };
 
@@ -169,9 +203,13 @@ export default function MentoringPage(): React.JSX.Element {
             showToast('Ukuran kelompok tidak valid', 'error');
             return;
         }
+        if (kategoriList.length > 0 && !autoGenForm.kategoriId) {
+            showToast('Pilih kategori terlebih dahulu', 'error');
+            return;
+        }
         try {
             const body: AutoGenerateGroupRequest = {
-                category: autoGenForm.category,
+                kategoriId: autoGenForm.kategoriId || undefined,
                 groupSize: autoGenForm.groupSize,
                 namePrefix: autoGenForm.namePrefix || undefined,
             };
@@ -213,7 +251,7 @@ export default function MentoringPage(): React.JSX.Element {
         const headers = ['Nama Kelompok', 'Kategori', 'Mentor', 'Email Mentor', 'Jumlah Anggota'];
         const rows = groups.map((g) => [
             g.name,
-            CATEGORY_LABEL[g.category],
+            groupKategoriLabel(g, kategoriList),
             g.mentor?.name || '-',
             g.mentor?.email || '-',
             g.members.length,
@@ -255,20 +293,28 @@ export default function MentoringPage(): React.JSX.Element {
                 </div>
             </div>
 
-            {/* ── Category Filter (manager only) ── */}
-            {isManager && (
+            {/* ── Category Filter (manager only) — sumber: Data Referensi ── */}
+            {isManager && kategoriList.length > 0 && (
                 <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
                     <button
                         className={`btn btn-sm ${categoryFilter === '' ? 'btn-primary' : 'btn-outline'}`}
                         onClick={() => setCategoryFilter('')}
                     >Semua</button>
-                    {CATEGORIES.map((cat) => (
+                    {kategoriList.map((kat) => (
                         <button
-                            key={cat}
-                            className={`btn btn-sm ${categoryFilter === cat ? 'btn-primary' : 'btn-outline'}`}
-                            onClick={() => setCategoryFilter(cat)}
-                        >{CATEGORY_LABEL[cat]}</button>
+                            key={kat.id}
+                            className={`btn btn-sm ${categoryFilter === kat.id ? 'btn-primary' : 'btn-outline'}`}
+                            onClick={() => setCategoryFilter(kat.id)}
+                        >{kat.name}</button>
                     ))}
+                </div>
+            )}
+            {isManager && kategoriList.length === 0 && (
+                <div className="info-banner" style={{ marginBottom: 20 }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}>
+                        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                    </svg>
+                    <span>Belum ada kategori. Tambahkan di menu <strong>Data Referensi → Kategori</strong> agar bisa mengelompokkan kelompok mentoring.</span>
                 </div>
             )}
 
@@ -297,7 +343,7 @@ export default function MentoringPage(): React.JSX.Element {
                                 <div>
                                     <h3 className="heading-3">{group.name}</h3>
                                     <div style={{ display: 'flex', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
-                                        <span className="badge badge-info">{CATEGORY_LABEL[group.category]}</span>
+                                        <span className="badge badge-info">{groupKategoriLabel(group, kategoriList)}</span>
                                         {group.mentor && (
                                             <span className="text-xs text-muted">Mentor: {group.mentor.name}</span>
                                         )}
@@ -383,7 +429,7 @@ export default function MentoringPage(): React.JSX.Element {
                     </>
                 }
             >
-                <GroupFormFields form={groupForm} onChange={setGroupForm} mentors={mentors} />
+                <GroupFormFields form={groupForm} onChange={setGroupForm} mentors={mentors} kategoriList={kategoriList} />
             </Modal>
 
             {/* ══ Modal: Edit Kelompok ══ */}
@@ -399,7 +445,7 @@ export default function MentoringPage(): React.JSX.Element {
                     </>
                 }
             >
-                <GroupFormFields form={groupForm} onChange={setGroupForm} mentors={mentors} />
+                <GroupFormFields form={groupForm} onChange={setGroupForm} mentors={mentors} kategoriList={kategoriList} />
             </Modal>
 
             {/* ══ Modal: Hapus Kelompok ══ */}
@@ -461,11 +507,17 @@ export default function MentoringPage(): React.JSX.Element {
             >
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                     <div className="form-group">
-                        <label className="form-label">Kategori</label>
-                        <select className="form-input" value={autoGenForm.category}
-                            onChange={(e) => setAutoGenForm({ ...autoGenForm, category: e.target.value as MentoringCategory })}>
-                            {CATEGORIES.map((c) => <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>)}
+                        <label className="form-label">Kategori <span style={{ color: 'var(--color-danger)' }}>*</span></label>
+                        <select className="form-input" value={autoGenForm.kategoriId}
+                            onChange={(e) => setAutoGenForm({ ...autoGenForm, kategoriId: e.target.value })}>
+                            <option value="">-- Pilih kategori --</option>
+                            {kategoriList.map((k) => <option key={k.id} value={k.id}>{k.name}</option>)}
                         </select>
+                        {kategoriList.length === 0 && (
+                            <p className="text-xs text-muted" style={{ marginTop: 4 }}>
+                                Belum ada kategori. Tambahkan di Data Referensi → Kategori.
+                            </p>
+                        )}
                     </div>
                     <div className="form-group">
                         <label className="form-label">Ukuran Kelompok</label>
@@ -475,11 +527,11 @@ export default function MentoringPage(): React.JSX.Element {
                     </div>
                     <div className="form-group">
                         <label className="form-label">Prefix Nama <span className="text-muted">(opsional)</span></label>
-                        <input className="form-input" placeholder={`Contoh: ${CATEGORY_LABEL[autoGenForm.category]}`}
+                        <input className="form-input" placeholder={`Contoh: ${kategoriList.find((k) => k.id === autoGenForm.kategoriId)?.name ?? 'Kelompok'}`}
                             value={autoGenForm.namePrefix}
                             onChange={(e) => setAutoGenForm({ ...autoGenForm, namePrefix: e.target.value })} />
                         <p className="text-xs text-muted" style={{ marginTop: 4 }}>
-                            Nama kelompok akan jadi: "{autoGenForm.namePrefix || CATEGORY_LABEL[autoGenForm.category]} - Kelompok 1", dst.
+                            Nama kelompok akan jadi: &quot;{autoGenForm.namePrefix || kategoriList.find((k) => k.id === autoGenForm.kategoriId)?.name || 'Kelompok'} - Kelompok 1&quot;, dst.
                         </p>
                     </div>
                     <div className="form-group">
@@ -563,26 +615,34 @@ function GroupFormFields({
     form,
     onChange,
     mentors,
+    kategoriList,
 }: {
     form: GroupForm;
     onChange: (f: GroupForm) => void;
     mentors: User[];
+    kategoriList: Kategori[];
 }) {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div className="form-group">
                 <label className="form-label">Nama Kelompok <span style={{ color: 'var(--color-danger)' }}>*</span></label>
-                <input className="form-input" placeholder="Kelompok Muallam 1-A"
+                <input className="form-input" placeholder="cth: Kelompok A"
                     value={form.name} onChange={(e) => onChange({ ...form, name: e.target.value })} />
             </div>
             <div className="form-group">
-                <label className="form-label">Kategori</label>
-                <select className="form-input" value={form.category}
-                    onChange={(e) => onChange({ ...form, category: e.target.value as MentoringCategory })}>
-                    {(['MUALLAM_1', 'MUALLAM_2', 'MUALLAM_3'] as MentoringCategory[]).map((c) => (
-                        <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>
+                <label className="form-label">Kategori <span style={{ color: 'var(--color-danger)' }}>*</span></label>
+                <select className="form-input" value={form.kategoriId}
+                    onChange={(e) => onChange({ ...form, kategoriId: e.target.value })}>
+                    <option value="">-- Pilih kategori --</option>
+                    {kategoriList.map((k) => (
+                        <option key={k.id} value={k.id}>{k.name}</option>
                     ))}
                 </select>
+                {kategoriList.length === 0 && (
+                    <p className="text-xs text-muted" style={{ marginTop: 4 }}>
+                        Belum ada kategori. Tambahkan di menu Data Referensi → Kategori.
+                    </p>
+                )}
             </div>
             <div className="form-group">
                 <label className="form-label">Mentor <span style={{ color: 'var(--color-danger)' }}>*</span></label>

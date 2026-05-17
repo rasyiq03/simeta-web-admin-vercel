@@ -98,6 +98,187 @@
     animation: pulse 2s ease-in-out infinite;
 }
 
+/* ── FIX #4: Global semester selector ── */
+.semesterBox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 10px 5px 12px;
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--radius-full);
+}
+
+.semesterLabel {
+    font-size: 0.71875rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.semesterSelect {
+    border: none;
+    background: transparent;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-navy);
+    cursor: pointer;
+    max-width: 200px;
+    padding: 2px 4px;
+    border-radius: var(--radius-sm);
+}
+
+.semesterSelect:focus {
+    outline: 2px solid var(--color-amber-light);
+    outline-offset: 1px;
+}
+
+.archiveBadge {
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #fff;
+    background: linear-gradient(135deg, var(--color-amber) 0%, var(--color-amber-dark) 100%);
+    padding: 2px 8px;
+    border-radius: var(--radius-full);
+}
+
+/* ── FIX #1: User account menu ── */
+.userMenu {
+    position: relative;
+}
+
+.userBtn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 10px 5px 6px;
+    background: var(--color-surface);
+    border: 1.5px solid var(--color-border-light);
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    color: var(--color-text-secondary);
+}
+
+.userBtn:hover {
+    border-color: var(--color-amber-light);
+    background: var(--color-amber-50);
+}
+
+.userAvatar {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-full);
+    background: linear-gradient(135deg, var(--color-navy) 0%, #2A3A7A 100%);
+    color: #fff;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.userName {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-navy);
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.userDropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 240px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 10px 30px rgba(18, 29, 89, 0.15);
+    padding: 6px;
+    z-index: 100;
+    animation: dropdownIn 0.12s ease-out;
+}
+
+@keyframes dropdownIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.userDropdownHead {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--color-border-light);
+    margin-bottom: 6px;
+}
+
+.userDropdownName {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--color-navy);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.userDropdownEmail {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-top: 1px;
+}
+
+.userDropdownRole {
+    display: inline-block;
+    margin-top: 6px;
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--color-amber-dark);
+    background: var(--color-amber-50);
+    padding: 2px 8px;
+    border-radius: var(--radius-full);
+}
+
+.userDropdownItem {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 9px 12px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    text-decoration: none;
+    text-align: left;
+    transition: background var(--transition-fast);
+}
+
+.userDropdownItem:hover {
+    background: var(--color-surface-2);
+    color: var(--color-navy);
+}
+
+.userDropdownDanger {
+    color: var(--color-danger);
+}
+
+.userDropdownDanger:hover {
+    background: rgba(239, 68, 68, 0.08);
+    color: var(--color-danger);
+}
+
 @media (max-width: 768px) {
     /* Leave room on the left for the hamburger button (40px + 14px margin = 54px) */
     .header { padding: 0 var(--space-4) 0 60px; }
@@ -105,4 +286,10 @@
     .title { font-size: 0.9375rem; }
     .subtitle { display: none; }
     .notifBtn { width: 36px; height: 36px; }
+    .actions { gap: var(--space-2); }
+    .semesterLabel { display: none; }
+    .semesterBox { padding: 5px 8px; }
+    .semesterSelect { max-width: 116px; font-size: 0.75rem; }
+    .userName { display: none; }
+    .userBtn { padding: 5px; }
 }

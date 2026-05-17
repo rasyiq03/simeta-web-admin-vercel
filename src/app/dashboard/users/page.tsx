@@ -1,17 +1,17 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef, type ChangeEvent } from 'react';
-import { usersApi, authApi, dashboardApi, attendanceApi, exportToCSV, parseCSV } from '@/lib/api';
+import { usersApi, authApi, dashboardApi, attendanceApi, referenceApi, exportToCSV, parseCSV } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import { useToast } from '@/lib/toast-context';
 import Modal from '@/components/Modal';
 import PasswordInput from '@/components/PasswordInput';
-import type { User, UserRole, Gender, BulkCreateUserItem } from '@/types';
+import type { User, UserRole, Gender, BulkCreateUserItem, Jurusan, Prodi, Kelas, Kategori } from '@/types';
 
 interface RoleModalState { open: boolean; user: User | null; selectedRole: UserRole; }
 interface AddUserForm {
     name: string; email: string; password: string; role: UserRole;
-    nim: string; kelas: string; prodi: string; jurusan: string; gender: Gender | '';
+    nim: string; jurusanId: string; prodiId: string; kelasId: string; kategoriId: string; gender: Gender | '';
 }
 interface ExportDropdownState { open: boolean; loading: boolean; }
 
@@ -37,7 +37,7 @@ const NEEDS_EXTENDED = (role: UserRole) => PARTICIPANT_ROLES.includes(role);
 
 const EMPTY_FORM: AddUserForm = {
     name: '', email: '', password: '', role: 'MENTEE',
-    nim: '', kelas: '', prodi: '', jurusan: '', gender: '',
+    nim: '', jurusanId: '', prodiId: '', kelasId: '', kategoriId: '', gender: '',
 };
 
 const PER_PAGE_OPTIONS = [10, 20, 50, 100];
@@ -54,6 +54,13 @@ export default function UsersPage(): React.JSX.Element {
     const [importModal, setImportModal] = useState(false);
     const [addForm, setAddForm]     = useState<AddUserForm>(EMPTY_FORM);
     const [addLoading, setAddLoading] = useState(false);
+    // FIX #3 — data referensi untuk dropdown bertingkat (jurusan→prodi→kelas)
+    const [refJurusan, setRefJurusan] = useState<Jurusan[]>([]);
+    const [refProdi, setRefProdi]     = useState<Prodi[]>([]);
+    const [refKelas, setRefKelas]     = useState<Kelas[]>([]);
+    const [refKategori, setRefKategori] = useState<Kategori[]>([]);
+    const [refLoading, setRefLoading] = useState(false);
+    const [refError, setRefError]     = useState<string | null>(null);
     const [importRows, setImportRows]   = useState<BulkCreateUserItem[]>([]);
     const [importErrors, setImportErrors] = useState<string[]>([]);
     const [importLoading, setImportLoading] = useState(false);
@@ -77,6 +84,30 @@ export default function UsersPage(): React.JSX.Element {
 
     // Reset page when filter changes
     useEffect(() => { setPage(1); }, [search, roleFilter, perPage]);
+
+    // FIX #3 — muat data referensi sekali saat modal Tambah Akun dibuka.
+    useEffect(() => {
+        if (!addModal || refJurusan.length > 0 || refLoading) return;
+        let cancelled = false;
+        (async () => {
+            setRefLoading(true); setRefError(null);
+            try {
+                const [j, p, k, kt] = await Promise.all([
+                    referenceApi.getJurusan(),
+                    referenceApi.getProdi(),
+                    referenceApi.getKelas(),
+                    referenceApi.getKategori().catch(() => [] as Kategori[]),
+                ]);
+                if (cancelled) return;
+                setRefJurusan(j); setRefProdi(p); setRefKelas(k); setRefKategori(kt);
+            } catch (err) {
+                if (!cancelled) setRefError((err as Error).message);
+            } finally {
+                if (!cancelled) setRefLoading(false);
+            }
+        })();
+        return () => { cancelled = true; };
+    }, [addModal, refJurusan.length, refLoading]);
 
     useEffect(() => {
         const handler = (e: MouseEvent) => {
@@ -124,6 +155,25 @@ export default function UsersPage(): React.JSX.Element {
         } catch (err) { showToast((err as Error).message, 'error'); }
     };
 
+    /* ── Kirim Info Akun via Email (FIX #2) ── */
+    const [emailingId, setEmailingId] = useState<string | null>(null);
+    const handleSendAccountInfo = async (usr: User) => {
+        if (!confirm(`Kirim informasi akun (email & kredensial) ke ${usr.email}?`)) return;
+        setEmailingId(usr.id);
+        try {
+            await usersApi.sendAccountInfo(usr.id);
+            showToast(`Informasi akun dikirim ke ${usr.email}`, 'success');
+        } catch (err) {
+            const msg = (err as Error).message;
+            const friendly = /404|not found|cannot post/i.test(msg)
+                ? 'Fitur kirim email akun belum tersedia di server. Hubungi administrator backend.'
+                : msg;
+            showToast(friendly, 'error', 5000);
+        } finally {
+            setEmailingId(null);
+        }
+    };
+
     /* ── Delete ── */
     const handleDelete = async (usr: User) => {
         if (usr.id === currentUser?.sub) {
@@ -150,8 +200,8 @@ export default function UsersPage(): React.JSX.Element {
             showToast('Nama, email, dan password wajib diisi', 'error'); return;
         }
         if (NEEDS_EXTENDED(addForm.role)) {
-            if (!addForm.nim || !addForm.kelas || !addForm.prodi || !addForm.jurusan || !addForm.gender) {
-                showToast('NIM, kelas, prodi, jurusan, dan gender wajib untuk peserta', 'error'); return;
+            if (!addForm.nim || !addForm.kelasId || !addForm.prodiId || !addForm.jurusanId || !addForm.gender) {
+                showToast('NIM, jurusan, prodi, kelas, dan gender wajib untuk peserta', 'error'); return;
             }
         }
         setAddLoading(true);
@@ -159,8 +209,12 @@ export default function UsersPage(): React.JSX.Element {
             await authApi.registerAs({
                 name: addForm.name, email: addForm.email, password: addForm.password, role: addForm.role,
                 ...(NEEDS_EXTENDED(addForm.role) && {
-                    nim: addForm.nim, kelas: addForm.kelas, prodi: addForm.prodi,
-                    jurusan: addForm.jurusan, gender: addForm.gender as Gender,
+                    nim: addForm.nim,
+                    jurusanId: addForm.jurusanId,
+                    prodiId: addForm.prodiId,
+                    kelasId: addForm.kelasId,
+                    ...(addForm.kategoriId && { kategoriId: addForm.kategoriId }),
+                    gender: addForm.gender as Gender,
                 }),
             });
             showToast(`Akun ${addForm.name} berhasil dibuat`, 'success');
@@ -300,6 +354,9 @@ export default function UsersPage(): React.JSX.Element {
 
     const participantCount = users.filter((u) => PARTICIPANT_ROLES.includes(u.role)).length;
     const needsExtended    = NEEDS_EXTENDED(addForm.role);
+    // FIX #3 — opsi dropdown bertingkat
+    const prodiOptions = refProdi.filter((p) => p.jurusanId === addForm.jurusanId);
+    const kelasOptions = refKelas.filter((k) => k.prodiId === addForm.prodiId);
 
     return (
         <div>
@@ -456,12 +513,19 @@ export default function UsersPage(): React.JSX.Element {
                                                                 </svg>
                                                             </button>
                                                             {(usr.role === 'MENTOR' || usr.role === 'MENTEE' || usr.role === 'PESERTA') && (
-                                                                <button className="btn btn-ghost btn-icon-sm" onClick={() => handleResetDevice(usr)} title="Reset Device" style={{ color: 'var(--color-warning)' }}>
+                                                                <button className="btn btn-ghost btn-icon-sm" onClick={() => handleResetDevice(usr)} title="Reset Device (lepas ikatan perangkat agar bisa login di HP baru)" style={{ color: 'var(--color-warning)' }}>
                                                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                                                         <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
                                                                     </svg>
                                                                 </button>
                                                             )}
+                                                            <button className="btn btn-ghost btn-icon-sm" onClick={() => handleSendAccountInfo(usr)} disabled={emailingId === usr.id} title="Kirim informasi akun ke email pengguna" style={{ color: 'var(--color-info)' }}>
+                                                                {emailingId === usr.id ? <span className="spinner spinner-sm" /> : (
+                                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                                        <path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><polyline points="22,6 12,13 2,6"/>
+                                                                    </svg>
+                                                                )}
+                                                            </button>
                                                             <button className="btn btn-ghost btn-icon-sm" onClick={() => handleDelete(usr)} title="Hapus" style={{ color: 'var(--color-danger)' }}>
                                                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                                                     <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
@@ -591,10 +655,23 @@ export default function UsersPage(): React.JSX.Element {
                     {needsExtended && (
                         <>
                             <div style={{ borderTop: '1px solid var(--color-border-light)', paddingTop: 10 }}>
-                                <p style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: 10 }}>
+                                <p style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: 4 }}>
                                     Data Akademik — wajib untuk {addForm.role}
                                 </p>
+                                <p className="text-xs text-muted">Pilih dari data master. Jika belum ada, tambahkan di menu <strong>Data Referensi</strong>.</p>
                             </div>
+
+                            {refLoading && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <span className="spinner spinner-sm" /> <span className="text-sm text-muted">Memuat data referensi…</span>
+                                </div>
+                            )}
+                            {refError && (
+                                <div className="warning-banner">
+                                    <span>Gagal memuat data referensi: {refError}. Tambahkan jurusan/prodi/kelas di menu Data Referensi terlebih dahulu.</span>
+                                </div>
+                            )}
+
                             <div className="form-grid-2">
                                 <div className="form-group">
                                     <label className="form-label">NIM <span className="required">*</span></label>
@@ -602,31 +679,50 @@ export default function UsersPage(): React.JSX.Element {
                                         onChange={(e: ChangeEvent<HTMLInputElement>) => setAddForm({ ...addForm, nim: e.target.value })} />
                                 </div>
                                 <div className="form-group">
-                                    <label className="form-label">Kelas <span className="required">*</span></label>
-                                    <input className="form-input" placeholder="A" value={addForm.kelas}
-                                        onChange={(e: ChangeEvent<HTMLInputElement>) => setAddForm({ ...addForm, kelas: e.target.value })} />
+                                    <label className="form-label">Gender <span className="required">*</span></label>
+                                    <select className="form-select" value={addForm.gender}
+                                        onChange={(e: ChangeEvent<HTMLSelectElement>) => setAddForm({ ...addForm, gender: e.target.value as Gender })}>
+                                        <option value="">-- Pilih Gender --</option>
+                                        <option value="LAKI_LAKI">Laki-laki</option>
+                                        <option value="PEREMPUAN">Perempuan</option>
+                                    </select>
                                 </div>
                             </div>
                             <div className="form-grid-2">
                                 <div className="form-group">
-                                    <label className="form-label">Program Studi <span className="required">*</span></label>
-                                    <input className="form-input" placeholder="Teknik Informatika" value={addForm.prodi}
-                                        onChange={(e: ChangeEvent<HTMLInputElement>) => setAddForm({ ...addForm, prodi: e.target.value })} />
+                                    <label className="form-label">Jurusan <span className="required">*</span></label>
+                                    <select className="form-select" value={addForm.jurusanId} disabled={refLoading || refJurusan.length === 0}
+                                        onChange={(e: ChangeEvent<HTMLSelectElement>) => setAddForm({ ...addForm, jurusanId: e.target.value, prodiId: '', kelasId: '' })}>
+                                        <option value="">{refJurusan.length === 0 ? '-- Belum ada jurusan --' : '-- Pilih Jurusan --'}</option>
+                                        {refJurusan.map((j) => <option key={j.id} value={j.id}>{j.name}</option>)}
+                                    </select>
                                 </div>
                                 <div className="form-group">
-                                    <label className="form-label">Jurusan <span className="required">*</span></label>
-                                    <input className="form-input" placeholder="Ilmu Komputer" value={addForm.jurusan}
-                                        onChange={(e: ChangeEvent<HTMLInputElement>) => setAddForm({ ...addForm, jurusan: e.target.value })} />
+                                    <label className="form-label">Program Studi <span className="required">*</span></label>
+                                    <select className="form-select" value={addForm.prodiId} disabled={!addForm.jurusanId}
+                                        onChange={(e: ChangeEvent<HTMLSelectElement>) => setAddForm({ ...addForm, prodiId: e.target.value, kelasId: '' })}>
+                                        <option value="">{!addForm.jurusanId ? '-- Pilih jurusan dulu --' : (prodiOptions.length === 0 ? '-- Belum ada prodi --' : '-- Pilih Prodi --')}</option>
+                                        {prodiOptions.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                    </select>
                                 </div>
                             </div>
-                            <div className="form-group">
-                                <label className="form-label">Gender <span className="required">*</span></label>
-                                <select className="form-select" value={addForm.gender}
-                                    onChange={(e: ChangeEvent<HTMLSelectElement>) => setAddForm({ ...addForm, gender: e.target.value as Gender })}>
-                                    <option value="">-- Pilih Gender --</option>
-                                    <option value="LAKI_LAKI">Laki-laki</option>
-                                    <option value="PEREMPUAN">Perempuan</option>
-                                </select>
+                            <div className="form-grid-2">
+                                <div className="form-group">
+                                    <label className="form-label">Kelas <span className="required">*</span></label>
+                                    <select className="form-select" value={addForm.kelasId} disabled={!addForm.prodiId}
+                                        onChange={(e: ChangeEvent<HTMLSelectElement>) => setAddForm({ ...addForm, kelasId: e.target.value })}>
+                                        <option value="">{!addForm.prodiId ? '-- Pilih prodi dulu --' : (kelasOptions.length === 0 ? '-- Belum ada kelas --' : '-- Pilih Kelas --')}</option>
+                                        {kelasOptions.map((k) => <option key={k.id} value={k.id}>{k.name}</option>)}
+                                    </select>
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Kategori <span className="text-muted">(opsional)</span></label>
+                                    <select className="form-select" value={addForm.kategoriId}
+                                        onChange={(e: ChangeEvent<HTMLSelectElement>) => setAddForm({ ...addForm, kategoriId: e.target.value })}>
+                                        <option value="">-- Tidak ada --</option>
+                                        {refKategori.map((kt) => <option key={kt.id} value={kt.id}>{kt.name}</option>)}
+                                    </select>
+                                </div>
                             </div>
                         </>
                     )}

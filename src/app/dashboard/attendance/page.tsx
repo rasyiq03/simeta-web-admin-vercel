@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, type ChangeEvent, type FormEvent } fr
 import { attendanceApi, exportToCSV } from '@/lib/api';
 import { useToast } from '@/lib/toast-context';
 import { useAuth } from '@/lib/auth-context';
+import { useSemester } from '@/lib/semester-context';
 import Modal from '@/components/Modal';
 import type { AttendanceSession, AttendanceSessionDetail, AttendanceRecordDetail, AttendanceStatus, CreateSessionRequest } from '@/types';
 
@@ -32,20 +33,21 @@ export default function AttendancePage(): React.JSX.Element {
     const [editForm, setEditForm]                 = useState<EditSessionForm>({ title: '', startTime: '', endTime: '' });
     const { showToast } = useToast();
     const { hasRole } = useAuth();
+    const { selectedSemesterId } = useSemester();
 
     const isManager = hasRole('ADMIN', 'PANITIA', 'DOSEN');
 
     const fetchSessions = useCallback(async () => {
         try {
             setLoading(true);
-            const data = await attendanceApi.getAll();
+            const data = await attendanceApi.getAll(selectedSemesterId || undefined);
             setSessions(Array.isArray(data) ? data : []);
         } catch (err) {
             showToast((err as Error).message, 'error');
         } finally {
             setLoading(false);
         }
-    }, [showToast]);
+    }, [showToast, selectedSemesterId]);
 
     useEffect(() => { fetchSessions(); }, [fetchSessions]);
 

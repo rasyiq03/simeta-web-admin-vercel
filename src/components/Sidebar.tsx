@@ -119,6 +119,11 @@ const Icon = {
             <path d="M14 18h2" />
         </svg>
     ),
+    Account: () => (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
+        </svg>
+    ),
     Logout: () => (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
@@ -149,6 +154,7 @@ const menuItems: MenuItem[] = [
     { label: 'Resume',           href: '/dashboard/resume',        icon: <Icon.Resume />,         roles: ['ADMIN', 'PANITIA', 'DOSEN'] },
     { label: 'Berita',           href: '/dashboard/news',          icon: <Icon.News />,           roles: ['ADMIN', 'PANITIA', 'DOSEN'] },
     { label: 'Notifikasi',       href: '/dashboard/notifications', icon: <Icon.Notification />,   roles: [] },
+    { label: 'Akun Saya',        href: '/dashboard/account',       icon: <Icon.Account />,        roles: [] },
     { label: 'Nilai',            href: '/dashboard/grading',       icon: <Icon.Grading />,        roles: ['ADMIN', 'PANITIA', 'DOSEN'] },
     { label: 'Manajemen Akses', href: '/dashboard/iam',           icon: <Icon.IAM />,            roles: ['ADMIN'] },
     { label: 'Data Referensi',  href: '/dashboard/reference',     icon: <Icon.Reference />,      roles: ['ADMIN'] },

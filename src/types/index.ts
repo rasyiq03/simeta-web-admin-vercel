@@ -314,7 +314,11 @@ export interface MentoringGroup {
     id: string;
     name: string;
     mentorId: string;
+    /** @deprecated FIX #5 — enum lama; pakai kategoriId/kategori dari Data Referensi. */
     category: MentoringCategory;
+    /** FIX #5 — kategori dinamis dari Data Referensi (sumber tunggal). */
+    kategoriId?: string | null;
+    kategori?: { id: string; name: string } | null;
     createdAt: string;
     mentor?: { id: string; name: string; email: string };
     members: MentoringMember[];
@@ -335,17 +339,22 @@ export interface MentoringMember {
 export interface CreateMentoringGroupRequest {
     name: string;
     mentorId: string;
-    category: MentoringCategory;
+    /** FIX #5 — kategori dari Data Referensi (sumber tunggal). */
+    kategoriId?: string;
+    /** Kompatibilitas: enum lama, dikirim hanya jika kategori tak terpetakan. */
+    category?: MentoringCategory;
 }
 
 export interface UpdateMentoringGroupRequest {
     name?: string;
     mentorId?: string;
+    kategoriId?: string;
     category?: MentoringCategory;
 }
 
 export interface AutoGenerateGroupRequest {
-    category: MentoringCategory;
+    kategoriId?: string;
+    category?: MentoringCategory;
     groupSize: number;
     mentorIds?: string[];
     menteeIds?: string[];

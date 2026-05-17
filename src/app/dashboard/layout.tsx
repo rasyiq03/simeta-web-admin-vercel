@@ -9,6 +9,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
+import { SemesterProvider } from '@/lib/semester-context';
 import Sidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
 import styles from './dashboard.module.css';
@@ -33,12 +34,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
 
     return (
-        <div className={styles.layout}>
-            <Sidebar />
-            <div className={styles.mainArea}>
-                <Header />
-                <main className={styles.content}>{children}</main>
+        <SemesterProvider>
+            <div className={styles.layout}>
+                <Sidebar />
+                <div className={styles.mainArea}>
+                    <Header />
+                    <main className={styles.content}>{children}</main>
+                </div>
             </div>
-        </div>
+        </SemesterProvider>
     );
 }
