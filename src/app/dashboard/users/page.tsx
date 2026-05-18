@@ -1,19 +1,28 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef, type ChangeEvent } from 'react';
-import { usersApi, authApi, dashboardApi, attendanceApi, referenceApi, exportToCSV, parseCSV } from '@/lib/api';
+import { usersApi, authApi, dashboardApi, attendanceApi, referenceApi, enrollmentApi, exportToCSV, parseCSV } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import { useToast } from '@/lib/toast-context';
+import { useSemester } from '@/lib/semester-context';
 import Modal from '@/components/Modal';
 import PasswordInput from '@/components/PasswordInput';
-import type { User, UserRole, Gender, BulkCreateUserItem, Jurusan, Prodi, Kelas, Kategori } from '@/types';
+import type { User, UserRole, Gender, BulkCreateUserItem, Jurusan, Prodi, Kelas, Kategori, EnrollmentMahasiswaType } from '@/types';
 
 interface RoleModalState { open: boolean; user: User | null; selectedRole: UserRole; }
 interface AddUserForm {
     name: string; email: string; password: string; role: UserRole;
     nim: string; gender: Gender | '';
     jurusanId: string; prodiId: string; kelasId: string; kategoriId: string;
+    // FIX — sekalian set status mentor/mentee/regular untuk semester terpilih.
+    mahasiswaType: EnrollmentMahasiswaType;
 }
+
+const MAHASISWA_TYPE_LABEL: Record<EnrollmentMahasiswaType, string> = {
+    REGULAR: 'Reguler (bukan mentor/mentee)',
+    MENTEE:  'Mentee',
+    MENTOR:  'Mentor',
+};
 interface ExportDropdownState { open: boolean; loading: boolean; }
 
 // Role enum yang VALID di backend (sumber: pesan validasi backend).
@@ -44,6 +53,7 @@ const EMPTY_FORM: AddUserForm = {
     name: '', email: '', password: '', role: 'MAHASISWA',
     nim: '', gender: '',
     jurusanId: '', prodiId: '', kelasId: '', kategoriId: '',
+    mahasiswaType: 'REGULAR',
 };
 
 const PER_PAGE_OPTIONS = [10, 20, 50, 100];
@@ -77,6 +87,7 @@ export default function UsersPage(): React.JSX.Element {
     const exportRef                 = useRef<HTMLDivElement>(null);
     const { user: currentUser } = useAuth();
     const { showToast } = useToast();
+    const { selectedSemesterId, selectedSemester } = useSemester();
 
     const fetchUsers = useCallback(async () => {
         try {
@@ -234,7 +245,38 @@ export default function UsersPage(): React.JSX.Element {
                     ...(addForm.kategoriId && { kategoriId: addForm.kategoriId }),
                 }),
             });
-            showToast(`Akun ${addForm.name} berhasil dibuat`, 'success');
+
+            // FIX #4 — sekalian set status mentor/mentee/regular di semester
+            // terpilih. registerAs hanya balas pesan, jadi user baru dicari
+            // lewat daftar (cocokkan email) untuk dapat id-nya lalu di-enroll.
+            let enrollNote = '';
+            if (NEEDS_EXTENDED(addForm.role)) {
+                if (!selectedSemesterId) {
+                    enrollNote = ' — pilih semester di header lalu atur tipe peserta di halaman Peserta.';
+                } else {
+                    try {
+                        const fresh = await usersApi.getAll();
+                        setUsers(Array.isArray(fresh) ? fresh : []);
+                        const created = fresh.find(
+                            (u) => u.email.toLowerCase() === addForm.email.toLowerCase(),
+                        );
+                        if (created) {
+                            await enrollmentApi.create({
+                                userId: created.id,
+                                semesterId: selectedSemesterId,
+                                mahasiswaType: addForm.mahasiswaType,
+                            });
+                            enrollNote = ` & di-enroll sebagai ${MAHASISWA_TYPE_LABEL[addForm.mahasiswaType]} di ${selectedSemester?.code ?? 'semester aktif'}`;
+                        } else {
+                            enrollNote = ' (akun dibuat; gagal menemukan akun untuk enroll — atur tipe peserta manual di halaman Peserta).';
+                        }
+                    } catch (e) {
+                        enrollNote = ` (akun dibuat; gagal set tipe peserta: ${(e as Error).message}).`;
+                    }
+                }
+            }
+
+            showToast(`Akun ${addForm.name} berhasil dibuat${enrollNote}`, 'success', 5000);
             setAddModal(false);
             setAddForm(EMPTY_FORM);
             fetchUsers();
@@ -740,6 +782,27 @@ export default function UsersPage(): React.JSX.Element {
                                         {refKategori.map((kt) => <option key={kt.id} value={kt.id}>{kt.name}</option>)}
                                     </select>
                                 </div>
+                            </div>
+
+                            {/* FIX — atur mentor/mentee sekalian saat buat akun */}
+                            <div style={{ borderTop: '1px solid var(--color-border-light)', paddingTop: 10 }}>
+                                <p style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: 4 }}>
+                                    Status di Semester
+                                </p>
+                                <p className="text-xs text-muted">
+                                    {selectedSemester
+                                        ? <>Akan di-enroll ke semester <strong>{selectedSemester.code}</strong> dengan status berikut.</>
+                                        : <>Belum ada semester dipilih — pilih di header dulu, atau atur nanti di halaman Peserta.</>}
+                                </p>
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Tipe Peserta</label>
+                                <select className="form-select" value={addForm.mahasiswaType}
+                                    onChange={(e: ChangeEvent<HTMLSelectElement>) => setAddForm({ ...addForm, mahasiswaType: e.target.value as EnrollmentMahasiswaType })}>
+                                    {(Object.keys(MAHASISWA_TYPE_LABEL) as EnrollmentMahasiswaType[]).map((t) => (
+                                        <option key={t} value={t}>{MAHASISWA_TYPE_LABEL[t]}</option>
+                                    ))}
+                                </select>
                             </div>
                         </>
                     )}

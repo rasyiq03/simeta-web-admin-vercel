@@ -76,6 +76,9 @@ import type {
     BulkEnrollResult,
     CopyFromSemesterRequest,
     CopyFromSemesterResult,
+    AuditLog,
+    UploadRecord,
+    UserQuota,
 } from '@/types';
 
 const API_BASE: string = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1').replace(/\/$/, '');
@@ -200,6 +203,23 @@ function broadcastSessionExpired(): void {
     window.dispatchEvent(new CustomEvent('simeta:session-expired'));
 }
 
+/**
+ * Normalisasi tanggal ke ISO-8601 penuh (UTC) yang diterima backend
+ * (NestJS class-validator @IsDateString / Prisma DateTime). Input dari
+ * <input type="date"> ("YYYY-MM-DD") atau type="datetime-local"
+ * ("YYYY-MM-DDTHH:mm") akan gagal di Prisma bila dikirim mentah →
+ * Internal Server Error. Pakai helper ini di SEMUA payload tanggal.
+ *
+ * - Mengembalikan string ISO untuk nilai valid.
+ * - Mengembalikan undefined untuk kosong/invalid (agar field opsional
+ *   tidak dikirim alih-alih mengirim nilai rusak).
+ */
+export function toISO(value?: string | null): string | undefined {
+    if (!value) return undefined;
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? undefined : d.toISOString();
+}
+
 async function apiFetch<T = unknown>(
     endpoint: string,
     options: RequestInit = {},
@@ -287,6 +307,20 @@ export const authApi = {
     // FE tetap memaksa user login ulang untuk konsistensi keamanan.
     changePassword: (body: { oldPassword: string; newPassword: string }): Promise<MessageResponse> =>
         apiFetch<MessageResponse>(`/auth/change-password`, {
+            method: 'POST',
+            body: JSON.stringify(body),
+        }),
+
+    // Reset password via email — minta tautan/kode reset dikirim ke email.
+    forgotPassword: (body: { email: string }): Promise<MessageResponse> =>
+        apiFetch<MessageResponse>(`/auth/forgot-password`, {
+            method: 'POST',
+            body: JSON.stringify(body),
+        }),
+
+    // Tetapkan password baru memakai token dari email.
+    resetPassword: (body: { token: string; newPassword: string }): Promise<MessageResponse> =>
+        apiFetch<MessageResponse>(`/auth/reset-password`, {
             method: 'POST',
             body: JSON.stringify(body),
         }),
@@ -681,6 +715,21 @@ export const iamApi = {
 };
 
 // =============================================================
+// 13B. AUDIT LOG API (Admin only)
+// =============================================================
+
+export const auditApi = {
+    list: (filters?: { action?: string; userId?: string; resource?: string }): Promise<AuditLog[]> => {
+        const qs = new URLSearchParams();
+        if (filters?.action) qs.set('action', filters.action);
+        if (filters?.userId) qs.set('userId', filters.userId);
+        if (filters?.resource) qs.set('resource', filters.resource);
+        const s = qs.toString();
+        return apiFetch<AuditLog[]>(`/audit-logs${s ? `?${s}` : ''}`);
+    },
+};
+
+// =============================================================
 // 14. DASHBOARD API
 // =============================================================
 
@@ -861,6 +910,13 @@ export const uploadApi = {
         }
         throw new Error('Upload timeout — file masih diproses, coba lagi nanti.');
     },
+
+    // Riwayat upload (semua user untuk ADMIN). Endpoint backend opsional —
+    // halaman menangani 404 secara anggun.
+    history: (): Promise<UploadRecord[]> => apiFetch<UploadRecord[]>(`/upload/history`),
+
+    // Status kuota upload per user.
+    quota: (): Promise<UserQuota[]> => apiFetch<UserQuota[]>(`/upload/quota`),
 };
 
 // =============================================================

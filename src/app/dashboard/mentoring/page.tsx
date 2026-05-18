@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, type ChangeEvent } from 'react';
-import { mentoringApi, usersApi, referenceApi, exportToCSV } from '@/lib/api';
+import { mentoringApi, usersApi, referenceApi, exportToCSV, toISO } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import { useToast } from '@/lib/toast-context';
 import { useSemester } from '@/lib/semester-context';
@@ -172,7 +172,16 @@ export default function MentoringPage(): React.JSX.Element {
             showToast(`Kelompok "${deleteTarget.name}" berhasil dihapus`, 'success');
             setDeleteTarget(null);
             fetchGroups();
-        } catch (err) { showToast((err as Error).message, 'error'); }
+        } catch (err) {
+            // Backend kerap balas 500 saat kelompok masih punya anggota /
+            // laporan (FK constraint tanpa cascade). Beri pesan yang actionable
+            // alih-alih "Internal Server Error" mentah.
+            const msg = (err as Error).message;
+            const friendly = /500|internal server error/i.test(msg)
+                ? 'Gagal menghapus kelompok. Kemungkinan masih ada anggota atau laporan terkait — keluarkan semua mentee & hapus laporannya dulu, atau minta admin backend mengaktifkan cascade delete.'
+                : msg;
+            showToast(friendly, 'error', 6000);
+        }
     };
 
     // ── Add Member ──
@@ -241,7 +250,8 @@ export default function MentoringPage(): React.JSX.Element {
     const handleSubmitReport = async () => {
         if (!reportForm.date) { showToast('Tanggal wajib diisi', 'error'); return; }
         try {
-            await mentoringApi.createReport(reportForm);
+            // Kirim tanggal sebagai ISO-8601 penuh (backend Prisma DateTime).
+            await mentoringApi.createReport({ ...reportForm, date: toISO(reportForm.date) as string });
             showToast('Laporan berhasil disimpan', 'success');
             setReportModal(false);
         } catch (err) { showToast((err as Error).message, 'error'); }

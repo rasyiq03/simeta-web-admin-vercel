@@ -10,7 +10,8 @@
     "lint": "eslint",
     "contract:fetch": "ts-node scripts/fetch-contract.ts",
     "types:sync": "pnpm dlx openapi-typescript src/contracts/openapi.v1.json -o src/types/api-generated.ts",
-    "types:check": "tsc --noEmit"
+    "types:check": "tsc --noEmit",
+    "screenshots": "node scripts/screenshots.mjs"
   },
   "dependencies": {
     "next": "16.1.6",

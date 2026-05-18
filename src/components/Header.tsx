@@ -25,6 +25,12 @@ const pageTitles: Record<string, string> = {
     '/dashboard/reference':     'Data Referensi',
     '/dashboard/semester':      'Manajemen Semester',
     '/dashboard/account':       'Akun Saya',
+    '/dashboard/grading-rules': 'Grading Rules & Simulasi',
+    '/dashboard/access-window': 'Manajemen Access Window',
+    '/dashboard/bam':           'Rekap BAM & Skor Mentor',
+    '/dashboard/compare-semesters': 'Perbandingan Antar-Semester',
+    '/dashboard/audit-log':     'Audit Log',
+    '/dashboard/upload-history': 'Riwayat Upload & Kuota',
 };
 
 export default function Header(): React.JSX.Element {

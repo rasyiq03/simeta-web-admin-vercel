@@ -6,6 +6,7 @@ import {
     semesterApi,
     enrollmentApi,
     usersApi,
+    toISO,
 } from '@/lib/api';
 import { useToast } from '@/lib/toast-context';
 import Modal from '@/components/Modal';
@@ -164,12 +165,16 @@ export default function SemesterPage(): React.JSX.Element {
             if (editYear) {
                 await academicYearApi.update(editYear.id, {
                     name: yearForm.name,
-                    startDate: yearForm.startDate,
-                    endDate: yearForm.endDate,
+                    startDate: toISO(yearForm.startDate),
+                    endDate: toISO(yearForm.endDate),
                 });
                 showToast('Tahun ajaran diperbarui', 'success');
             } else {
-                await academicYearApi.create(yearForm);
+                await academicYearApi.create({
+                    ...yearForm,
+                    startDate: toISO(yearForm.startDate) as string,
+                    endDate: toISO(yearForm.endDate) as string,
+                });
                 showToast('Tahun ajaran dibuat', 'success');
             }
             setYearModal(false);
@@ -218,12 +223,16 @@ export default function SemesterPage(): React.JSX.Element {
             if (editSemester) {
                 await semesterApi.update(editSemester.id, {
                     name: semesterForm.name,
-                    startDate: semesterForm.startDate,
-                    endDate: semesterForm.endDate,
+                    startDate: toISO(semesterForm.startDate),
+                    endDate: toISO(semesterForm.endDate),
                 });
                 showToast('Semester diperbarui', 'success');
             } else {
-                await semesterApi.create(semesterForm);
+                await semesterApi.create({
+                    ...semesterForm,
+                    startDate: toISO(semesterForm.startDate) as string,
+                    endDate: toISO(semesterForm.endDate) as string,
+                });
                 showToast('Semester dibuat', 'success');
             }
             setSemesterModal(false);

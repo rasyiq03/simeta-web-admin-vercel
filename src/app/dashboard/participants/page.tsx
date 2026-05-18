@@ -1,11 +1,16 @@
 'use client';
 
 import { useState, useEffect, useCallback, type ChangeEvent } from 'react';
-import { usersApi, exportToCSV } from '@/lib/api';
+import { usersApi, enrollmentApi, exportToCSV } from '@/lib/api';
 import { useToast } from '@/lib/toast-context';
 import { useSemester } from '@/lib/semester-context';
 import Modal from '@/components/Modal';
-import type { User, UserRole } from '@/types';
+import type { User, UserRole, Enrollment, EnrollmentMahasiswaType } from '@/types';
+
+const MAHASISWA_TYPES: EnrollmentMahasiswaType[] = ['REGULAR', 'MENTEE', 'MENTOR'];
+const TYPE_LABEL: Record<EnrollmentMahasiswaType, string> = {
+    REGULAR: 'Reguler', MENTEE: 'Mentee', MENTOR: 'Mentor',
+};
 
 // Backend kini memakai role MAHASISWA (mentor/mentee per-semester via Enrollment).
 const PARTICIPANT_ROLES: UserRole[] = ['MAHASISWA', 'MENTEE', 'MENTOR', 'PESERTA'];
@@ -31,8 +36,10 @@ export default function ParticipantsPage(): React.JSX.Element {
     const [genderFilter, setGenderFilter]     = useState('');
     const [detailUser, setDetailUser]         = useState<User | null>(null);
     const [expandedKelas, setExpandedKelas]   = useState<Set<string>>(new Set());
+    const [enrollByUser, setEnrollByUser] = useState<Record<string, Enrollment>>({});
+    const [savingTypeId, setSavingTypeId] = useState<string | null>(null);
     const { showToast } = useToast();
-    const { selectedSemesterId } = useSemester();
+    const { selectedSemesterId, selectedSemester } = useSemester();
 
     const fetchParticipants = useCallback(async () => {
         try {
@@ -46,7 +53,45 @@ export default function ParticipantsPage(): React.JSX.Element {
         }
     }, [showToast, selectedSemesterId]);
 
+    // FIX #3 — muat enrollment semester terpilih agar bisa menampilkan &
+    // mengubah status mentor/mentee/reguler per mahasiswa.
+    const fetchEnrollments = useCallback(async () => {
+        if (!selectedSemesterId) { setEnrollByUser({}); return; }
+        try {
+            const list = await enrollmentApi.list(selectedSemesterId);
+            const map: Record<string, Enrollment> = {};
+            for (const e of list) map[e.userId] = e;
+            setEnrollByUser(map);
+        } catch {
+            setEnrollByUser({}); // endpoint tak tersedia → kontrol disembunyikan
+        }
+    }, [selectedSemesterId]);
+
     useEffect(() => { fetchParticipants(); }, [fetchParticipants]);
+    useEffect(() => { fetchEnrollments(); }, [fetchEnrollments]);
+
+    // FIX #3 — set/ubah tipe peserta untuk semester terpilih.
+    const changeType = async (usr: User, type: EnrollmentMahasiswaType) => {
+        if (!selectedSemesterId) {
+            showToast('Pilih semester di header terlebih dahulu', 'error');
+            return;
+        }
+        setSavingTypeId(usr.id);
+        try {
+            const existing = enrollByUser[usr.id];
+            const saved = existing
+                ? await enrollmentApi.update(existing.id, { mahasiswaType: type })
+                : await enrollmentApi.create({
+                    userId: usr.id, semesterId: selectedSemesterId, mahasiswaType: type,
+                });
+            setEnrollByUser((m) => ({ ...m, [usr.id]: saved }));
+            showToast(`${usr.name}: ${TYPE_LABEL[type]} di ${selectedSemester?.code ?? 'semester ini'}`, 'success');
+        } catch (err) {
+            showToast((err as Error).message, 'error');
+        } finally {
+            setSavingTypeId(null);
+        }
+    };
 
     /* ── Filter options derived from data ── */
     const kelasList   = [...new Set(participants.map((u) => u.kelas?.name).filter(Boolean))] as string[];
@@ -244,7 +289,9 @@ export default function ParticipantsPage(): React.JSX.Element {
                                         <tr>
                                             <th>#</th><th>Nama</th><th>NIM</th>
                                             <th>Peran</th><th>Kelas</th><th>Prodi / Jurusan</th>
-                                            <th>Gender</th><th>Aksi</th>
+                                            <th>Gender</th>
+                                            <th>Tipe {selectedSemester ? `(${selectedSemester.code})` : '(Semester)'}</th>
+                                            <th>Aksi</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -291,6 +338,25 @@ export default function ParticipantsPage(): React.JSX.Element {
                                                                 {usr.gender === 'LAKI_LAKI' ? '♂ L' : '♀ P'}
                                                             </span>
                                                         ) : <span className="text-muted text-xs">—</span>}
+                                                    </td>
+                                                    <td>
+                                                        {selectedSemesterId ? (
+                                                            <select
+                                                                className="form-select"
+                                                                style={{ minWidth: 104, padding: '4px 8px', fontSize: '0.8rem' }}
+                                                                value={enrollByUser[usr.id]?.mahasiswaType ?? ''}
+                                                                disabled={savingTypeId === usr.id}
+                                                                onChange={(e: ChangeEvent<HTMLSelectElement>) => changeType(usr, e.target.value as EnrollmentMahasiswaType)}
+                                                                title="Atur status mentor/mentee untuk semester terpilih"
+                                                            >
+                                                                {!enrollByUser[usr.id] && <option value="">— belum —</option>}
+                                                                {MAHASISWA_TYPES.map((t) => (
+                                                                    <option key={t} value={t}>{TYPE_LABEL[t]}</option>
+                                                                ))}
+                                                            </select>
+                                                        ) : (
+                                                            <span className="text-muted text-xs">pilih semester</span>
+                                                        )}
                                                     </td>
                                                     <td>
                                                         <button className="btn btn-ghost btn-icon-sm" title="Detail"

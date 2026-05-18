@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, type ChangeEvent, type FormEvent } from 'react';
-import { attendanceApi, exportToCSV } from '@/lib/api';
+import { attendanceApi, exportToCSV, toISO } from '@/lib/api';
 import { useToast } from '@/lib/toast-context';
 import { useAuth } from '@/lib/auth-context';
 import { useSemester } from '@/lib/semester-context';
@@ -74,7 +74,13 @@ export default function AttendancePage(): React.JSX.Element {
             return;
         }
         try {
-            await attendanceApi.createSession(form);
+            // Normalisasi ke ISO-8601 — kirim mentah ("YYYY-MM-DDTHH:mm")
+            // bisa memicu Internal Server Error di Prisma.
+            await attendanceApi.createSession({
+                title: form.title,
+                startTime: toISO(form.startTime) as string,
+                endTime: toISO(form.endTime) as string,
+            });
             showToast('Sesi absensi berhasil dibuat', 'success');
             setShowCreateModal(false);
             setForm({ title: '', startTime: '', endTime: '' });
@@ -100,8 +106,8 @@ export default function AttendancePage(): React.JSX.Element {
         try {
             await attendanceApi.update(editSessionModal.session.id, {
                 title: editForm.title,
-                startTime: new Date(editForm.startTime).toISOString(),
-                endTime: new Date(editForm.endTime).toISOString(),
+                startTime: toISO(editForm.startTime),
+                endTime: toISO(editForm.endTime),
             });
             showToast('Sesi berhasil diperbarui', 'success');
             setEditSessionModal({ open: false, session: null });

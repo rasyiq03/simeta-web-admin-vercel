@@ -155,10 +155,17 @@ const menuItems: MenuItem[] = [
     { label: 'Berita',           href: '/dashboard/news',          icon: <Icon.News />,           roles: ['ADMIN', 'PANITIA', 'DOSEN'] },
     { label: 'Notifikasi',       href: '/dashboard/notifications', icon: <Icon.Notification />,   roles: [] },
     { label: 'Akun Saya',        href: '/dashboard/account',       icon: <Icon.Account />,        roles: [] },
-    { label: 'Nilai',            href: '/dashboard/grading',       icon: <Icon.Grading />,        roles: ['ADMIN', 'PANITIA', 'DOSEN'] },
+    { label: 'Komposisi Nilai',  href: '/dashboard/grading',       icon: <Icon.Grading />,        roles: ['ADMIN', 'PANITIA', 'DOSEN'] },
+    { label: 'Ranking Nilai',    href: '/dashboard/grades',        icon: <Icon.Grades />,         roles: ['ADMIN', 'PANITIA', 'DOSEN'] },
+    { label: 'Grading Rules',    href: '/dashboard/grading-rules', icon: <Icon.Grading />,        roles: ['ADMIN', 'PANITIA', 'DOSEN'] },
+    { label: 'Access Window',    href: '/dashboard/access-window', icon: <Icon.Attendance />,     roles: ['ADMIN', 'PANITIA'] },
+    { label: 'BAM & Mentor',     href: '/dashboard/bam',           icon: <Icon.Mentoring />,      roles: ['ADMIN', 'PANITIA', 'DOSEN', 'MENTOR'] },
+    { label: 'Banding Semester', href: '/dashboard/compare-semesters', icon: <Icon.Semester />,   roles: ['ADMIN', 'PANITIA'] },
     { label: 'Manajemen Akses', href: '/dashboard/iam',           icon: <Icon.IAM />,            roles: ['ADMIN'] },
     { label: 'Data Referensi',  href: '/dashboard/reference',     icon: <Icon.Reference />,      roles: ['ADMIN'] },
     { label: 'Semester',         href: '/dashboard/semester',      icon: <Icon.Semester />,       roles: ['ADMIN', 'PANITIA'] },
+    { label: 'Audit Log',        href: '/dashboard/audit-log',     icon: <Icon.IAM />,            roles: ['ADMIN'] },
+    { label: 'Riwayat Upload',   href: '/dashboard/upload-history', icon: <Icon.Reference />,     roles: ['ADMIN'] },
 ];
 
 const roleBadgeColor: Record<string, string> = {

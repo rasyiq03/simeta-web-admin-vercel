@@ -661,6 +661,41 @@ export interface UnreadCountResponse {
     unreadCount: number;
 }
 
+// ─── Audit Log Types ─── //
+
+export interface AuditLog {
+    id: string;
+    action: string;
+    resource: string;
+    resourceId?: string | null;
+    userId?: string | null;
+    user?: { id: string; name: string; email: string; role: UserRole } | null;
+    detail?: string | null;
+    ipAddress?: string | null;
+    createdAt: string;
+}
+
+// ─── Upload History / Quota Types ─── //
+
+export interface UploadRecord {
+    id: string;
+    userId: string;
+    user?: { id: string; name: string; email: string };
+    fileName: string;
+    fileUrl?: string | null;
+    sizeBytes?: number | null;
+    status: 'queued' | 'processing' | 'ready' | 'rejected' | 'failed';
+    errorMessage?: string | null;
+    createdAt: string;
+}
+
+export interface UserQuota {
+    userId: string;
+    user?: { id: string; name: string; email: string };
+    used: number;
+    limit: number;
+}
+
 // ─── Export Types ─── //
 
 export type ExportType = 'attendance' | 'grades' | 'all';
