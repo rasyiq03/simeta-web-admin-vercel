@@ -33,12 +33,20 @@
     width: 42px;
     height: 42px;
     border-radius: var(--radius-md);
-    background: linear-gradient(135deg, #DE902A 0%, #F5B85A 100%);
+    background: #fff;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
     box-shadow: 0 4px 16px rgba(222,144,42,0.35);
+    overflow: hidden;
+}
+
+.logoIcon img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 4px;
 }
 
 .brandText {

@@ -157,15 +157,9 @@ const menuItems: MenuItem[] = [
     { label: 'Akun Saya',        href: '/dashboard/account',       icon: <Icon.Account />,        roles: [] },
     { label: 'Komposisi Nilai',  href: '/dashboard/grading',       icon: <Icon.Grading />,        roles: ['ADMIN', 'PANITIA', 'DOSEN'] },
     { label: 'Ranking Nilai',    href: '/dashboard/grades',        icon: <Icon.Grades />,         roles: ['ADMIN', 'PANITIA', 'DOSEN'] },
-    { label: 'Grading Rules',    href: '/dashboard/grading-rules', icon: <Icon.Grading />,        roles: ['ADMIN', 'PANITIA', 'DOSEN'] },
-    { label: 'Access Window',    href: '/dashboard/access-window', icon: <Icon.Attendance />,     roles: ['ADMIN', 'PANITIA'] },
-    { label: 'BAM & Mentor',     href: '/dashboard/bam',           icon: <Icon.Mentoring />,      roles: ['ADMIN', 'PANITIA', 'DOSEN', 'MENTOR'] },
-    { label: 'Banding Semester', href: '/dashboard/compare-semesters', icon: <Icon.Semester />,   roles: ['ADMIN', 'PANITIA'] },
     { label: 'Manajemen Akses', href: '/dashboard/iam',           icon: <Icon.IAM />,            roles: ['ADMIN'] },
     { label: 'Data Referensi',  href: '/dashboard/reference',     icon: <Icon.Reference />,      roles: ['ADMIN'] },
     { label: 'Semester',         href: '/dashboard/semester',      icon: <Icon.Semester />,       roles: ['ADMIN', 'PANITIA'] },
-    { label: 'Audit Log',        href: '/dashboard/audit-log',     icon: <Icon.IAM />,            roles: ['ADMIN'] },
-    { label: 'Riwayat Upload',   href: '/dashboard/upload-history', icon: <Icon.Reference />,     roles: ['ADMIN'] },
 ];
 
 const roleBadgeColor: Record<string, string> = {
@@ -223,10 +217,8 @@ export default function Sidebar(): React.JSX.Element {
                 {/* Logo / Brand */}
                 <div className={styles.brand}>
                     <div className={styles.logoIcon}>
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
-                            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
-                        </svg>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src="/logo.png" alt="SIMETA" />
                     </div>
                     <div className={styles.brandText}>
                         <span className={styles.brandName}>SIMETA</span>

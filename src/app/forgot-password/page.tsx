@@ -47,7 +47,10 @@ export default function ForgotPasswordPage(): React.JSX.Element {
 
             <div className={styles.card}>
                 <div className={styles.logoContainer}>
-                    <div className={styles.logo}>S</div>
+                    <div className={styles.logo}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src="/logo.png" alt="SIMETA" />
+                    </div>
                     <h1 className={styles.title}>Reset Password</h1>
                     <p className={styles.subtitle}>Masukkan email akun Anda untuk menerima tautan reset</p>
                 </div>

@@ -76,9 +76,6 @@ import type {
     BulkEnrollResult,
     CopyFromSemesterRequest,
     CopyFromSemesterResult,
-    AuditLog,
-    UploadRecord,
-    UserQuota,
 } from '@/types';
 
 const API_BASE: string = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1').replace(/\/$/, '');
@@ -715,21 +712,6 @@ export const iamApi = {
 };
 
 // =============================================================
-// 13B. AUDIT LOG API (Admin only)
-// =============================================================
-
-export const auditApi = {
-    list: (filters?: { action?: string; userId?: string; resource?: string }): Promise<AuditLog[]> => {
-        const qs = new URLSearchParams();
-        if (filters?.action) qs.set('action', filters.action);
-        if (filters?.userId) qs.set('userId', filters.userId);
-        if (filters?.resource) qs.set('resource', filters.resource);
-        const s = qs.toString();
-        return apiFetch<AuditLog[]>(`/audit-logs${s ? `?${s}` : ''}`);
-    },
-};
-
-// =============================================================
 // 14. DASHBOARD API
 // =============================================================
 
@@ -910,13 +892,6 @@ export const uploadApi = {
         }
         throw new Error('Upload timeout — file masih diproses, coba lagi nanti.');
     },
-
-    // Riwayat upload (semua user untuk ADMIN). Endpoint backend opsional —
-    // halaman menangani 404 secara anggun.
-    history: (): Promise<UploadRecord[]> => apiFetch<UploadRecord[]>(`/upload/history`),
-
-    // Status kuota upload per user.
-    quota: (): Promise<UserQuota[]> => apiFetch<UserQuota[]>(`/upload/quota`),
 };
 
 // =============================================================

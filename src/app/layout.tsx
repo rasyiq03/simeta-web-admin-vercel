@@ -22,7 +22,7 @@ export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
     title: 'SIMETA CMS',
     description: 'Content Management System for SIMETA — Sistem Informasi Mentoring dan Tahfidz',
-    icons: { icon: '/favicon.ico' },
+    icons: { icon: '/logo.png', shortcut: '/logo.png', apple: '/logo.png' },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }): React.JSX.Element {

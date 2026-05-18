@@ -78,7 +78,10 @@ export default function LoginPage(): React.JSX.Element {
             {/* Login Card */}
             <div className={styles.card}>
                 <div className={styles.logoContainer}>
-                    <div className={styles.logo}>S</div>
+                    <div className={styles.logo}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src="/logo.png" alt="SIMETA" />
+                    </div>
                     <h1 className={styles.title}>SIMETA CMS</h1>
                     <p className={styles.subtitle}>Masuk ke panel administrasi</p>
                 </div>
